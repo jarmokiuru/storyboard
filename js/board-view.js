@@ -29,6 +29,7 @@ export class BoardView {
     this.horizon = 0.5;
     this.history = new History();
     this.touches = new Map();
+    this.ignored = new Set();   // finger ids judged to be a resting palm, until they lift
     this.gesture = null;
     this.action = null;
     this.tool = null;
@@ -207,7 +208,10 @@ export class BoardView {
     if (e.pointerType === "pen") {
       this.penSeen = true;
       this.lastPen = e.timeStamp;
-      if (this.gesture) this.gesture.pen = true;
+      // Any fingers already down are the drawing hand resting: drop them so they can't pan the board.
+      for (const id of this.touches.keys()) this.ignored.add(id);
+      this.touches.clear();
+      this.gesture = null;
     }
     if (this.action || !this.tool) return;
     try { this.view.setPointerCapture(e.pointerId); } catch { /* still works without */ }
@@ -328,13 +332,13 @@ export class BoardView {
 
   continueStroke(e) {
     const list = HAS_COALESCED ? e.getCoalescedEvents() : [];
-    for (const c of list.length ? list : [e]) this.addSample(c, true);
+    for (const c of list.length ? list : [e]) this.addSample(c, true, e);
     this.predict(e);
   }
 
-  addSample(src, moving) {
+  addSample(src, moving, parent = null) {
     const a = this.action;
-    const s = readSample(src, a.type, (x, y) => this.toBoard(x, y));
+    const s = readSample(src, a.type, (x, y) => this.toBoard(x, y), parent);
     if (moving && a.type === "pen") notePressure(src.pressure);
     if (a.last) {
       const dt = Math.max(2, s.time - a.last.time);
@@ -386,7 +390,7 @@ export class BoardView {
     let prev = a.last;
     let pw = a.lastW;
     for (const p of points) {
-      const s = readSample(p, a.type, (x, y) => this.toBoard(x, y));
+      const s = readSample(p, a.type, (x, y) => this.toBoard(x, y), e);
       const w = widthFor(a.def, a.size, s, a.speed);
       drawSegment(this.predictCtx, a.def, prev, s, pw, w);
       this.grow(a.pbox, s, reach(a.def, w));
@@ -458,9 +462,13 @@ export class BoardView {
   // ---------- fingers: pan, pinch, two-finger tap = undo, three = redo ----------
 
   touchDown(e) {
-    if (this.action?.type === "pen") return;   // a palm while drawing
+    // A hand landing while the Pencil draws, or just after, is a palm.
+    if (this.action?.type === "pen" || e.timeStamp - this.lastPen < PALM_GUARD_MS) {
+      this.ignored.add(e.pointerId);
+      return;
+    }
     this.touches.set(e.pointerId, { x: e.clientX, y: e.clientY });
-    if (!this.gesture) this.gesture = { start: e.timeStamp, max: 0, moved: false, pen: e.timeStamp - this.lastPen < PALM_GUARD_MS };
+    if (!this.gesture) this.gesture = { start: e.timeStamp, max: 0, moved: false };
     this.gesture.max = Math.max(this.gesture.max, this.touches.size);
     this.gestureBase();
   }
@@ -504,10 +512,11 @@ export class BoardView {
   }
 
   touchUp(e) {
+    if (this.ignored.delete(e.pointerId)) return;
     if (!this.touches.delete(e.pointerId) || !this.gesture) return;
     const g = this.gesture;
     if (this.touches.size === 0) {
-      const tap = !g.moved && !g.pen && e.timeStamp - g.start < TAP_MS && e.timeStamp - this.lastPen > PALM_GUARD_MS;
+      const tap = !g.moved && e.timeStamp - g.start < TAP_MS && e.timeStamp - this.lastPen > PALM_GUARD_MS;
       if (tap && g.max === 2) this.undo();
       else if (tap && g.max >= 3) this.redo();
       this.gesture = null;

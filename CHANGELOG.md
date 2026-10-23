@@ -1,5 +1,9 @@
 # Changelog
 
+## 2026-10-23 — Storyboard v0.2.1
+- Tilt now widens the line: Safari's in-between Pencil samples carry a placeholder upright angle, so they now borrow the angle of the event they arrive with. Pencil and light pencil widen more when tipped.
+- Palm rejection: fingers already resting when the Pencil touches down, or landing while or just after it draws, can no longer pan or zoom the board.
+
 ## 2026-10-23 — Storyboard v0.2.0 (phase 2: boards without 3D)
 - The app now opens at the site root: projects list, new project with aspect ratio, delete, import project file.
 - Board editor modelled on Storyboarder: tool column (light pencil, pencil, pen, brush, eraser, note pen, move/scale), three sizes and five colours per tool, straight-line toggle.
