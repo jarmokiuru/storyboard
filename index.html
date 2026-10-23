@@ -2,20 +2,105 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
 <title>Storyboard</title>
-<style>
-  :root { color-scheme: light dark; }
-  body { margin: 0; padding: 32px 16px; background: #222428; color: #e8e6e1; font: 17px/1.5 -apple-system, BlinkMacSystemFont, "Helvetica Neue", sans-serif; }
-  main { max-width: 560px; margin: 0 auto; }
-  a { color: #f2efe8; }
-</style>
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black">
+<meta name="apple-mobile-web-app-title" content="Storyboard">
+<meta name="theme-color" content="#222428">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icons/icon-180.png">
+<link rel="stylesheet" href="css/app.css">
 </head>
 <body>
-<main>
-  <h1>Storyboard</h1>
-  <p>The app isn't built yet.</p>
-  <p><a href="pencil-test/">Open the pencil test →</a></p>
-</main>
+
+<section id="projects-screen" hidden>
+  <header class="bar">
+    <h1>Storyboard</h1>
+    <span id="app-version" class="muted"></span>
+    <span class="spacer"></span>
+    <button id="import-project">Import project file</button>
+    <button id="new-project" class="primary">New project</button>
+  </header>
+  <div class="projects-body">
+    <p id="storage-note" class="note" hidden></p>
+    <ul id="project-list"></ul>
+    <p id="no-projects" class="empty" hidden>No projects on this device yet. Tap New project, or import a project file.</p>
+    <p class="foot"><a href="pencil-test/">Pencil test</a></p>
+  </div>
+</section>
+
+<section id="editor-screen" hidden>
+  <header class="bar" id="top-bar">
+    <button id="back">‹ Projects</button>
+    <span id="project-title" class="title"></span>
+    <select id="scene-jump" aria-label="Jump to scene"></select>
+    <span class="spacer"></span>
+    <span id="export-note" class="muted"></span>
+    <button id="undo">Undo</button>
+    <button id="redo">Redo</button>
+    <button id="guides-btn">Guides</button>
+    <button id="export-btn">Export</button>
+    <button id="info-btn" class="narrow-only">Shot info</button>
+  </header>
+
+  <nav id="tools"></nav>
+
+  <main id="stage">
+    <div id="view"><div id="stack"></div></div>
+    <div id="cursor" hidden></div>
+    <button id="fit" class="small">Fit</button>
+  </main>
+
+  <aside id="panel">
+    <section class="shot">
+      <p id="scene-heading" class="heading"></p>
+      <p id="board-label" class="muted"></p>
+      <div class="pair">
+        <label><span>Kuva #</span><input id="f-kuva" autocomplete="off"></label>
+        <label><span>Kuvakoko</span><input id="f-kuvakoko" autocomplete="off"></label>
+      </div>
+      <div class="pair">
+        <label><span>Lens/Focal</span><input id="f-lens" autocomplete="off"></label>
+        <label><span>Movement</span><input id="f-movement" autocomplete="off"></label>
+      </div>
+      <label><span>Dialogue</span><textarea id="f-dialogue" rows="2"></textarea></label>
+      <label><span>Action</span><textarea id="f-action" rows="2"></textarea></label>
+      <label><span>Notes</span><textarea id="f-notes" rows="2"></textarea></label>
+      <label><span>Scene</span><select id="f-scene"></select></label>
+    </section>
+    <section class="buttons">
+      <button id="new-board" title="Another board in this shot (Shift-N)">New board</button>
+      <button id="new-shot" title="Next Kuva # (N)">New shot</button>
+      <button id="dup-board">Duplicate</button>
+      <button id="del-board" class="danger">Delete board</button>
+      <button disabled title="Comes in phase 4">Shot Generator</button>
+    </section>
+    <section>
+      <h3>Layers</h3>
+      <ul id="layers"></ul>
+      <button id="clear-layer">Clear active layer</button>
+    </section>
+    <section>
+      <h3>Reference</h3>
+      <div class="seg">
+        <button data-fit="fit" class="on">Fit</button>
+        <button data-fit="fill">Fill</button>
+      </div>
+      <button id="add-photo">Add photo…</button>
+    </section>
+  </aside>
+
+  <footer id="strip"></footer>
+</section>
+
+<div id="menu" hidden></div>
+<dialog id="dialog"></dialog>
+<div id="toast" hidden></div>
+<div id="banner" hidden></div>
+<input type="file" id="file-input" hidden>
+
+<script type="module" src="js/main.js"></script>
 </body>
 </html>
