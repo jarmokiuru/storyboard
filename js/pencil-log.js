@@ -79,4 +79,12 @@ export function watch(el) {
       note(`${who(e)} ${type.replace("pointer", "").replace("lost", "lost ")}${n === undefined ? "" : ` after ${n} moves`}`);
     }, true);
   }
+  // Safari also reports the Pencil through older "touch" events. If one of these shows up with no
+  // "pen down" beside it, Safari dropped the stroke on its way to the app; if neither shows up,
+  // the iPad itself never passed the touch on.
+  el.addEventListener("touchstart", (e) => {
+    for (const t of e.changedTouches) {
+      if (t.touchType === "stylus") note(`stylus touch (second channel) at ${Math.round(t.clientX)},${Math.round(t.clientY)}`);
+    }
+  }, true);
 }

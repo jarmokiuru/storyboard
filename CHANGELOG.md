@@ -1,5 +1,8 @@
 # Changelog
 
+## 2026-10-23 — Storyboard v0.3.5
+- Pencil log also records the Pencil as reported through Safari's older touch channel, to tell whether a missing stroke was dropped by Safari or never sent by the iPad.
+
 ## 2026-10-23 — Storyboard v0.3.4
 - Pencil log: large touches the iPad cancels by itself (a resting hand, a grip on the edge) are folded into one summary line, so they no longer push the Pencil events out of the log. It now keeps 300 lines.
 
