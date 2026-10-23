@@ -5,6 +5,7 @@ import { LAYERS } from "./model.js";
 import { readSample, widthFor, drawSegment, drawDot, notePressure, reach } from "./brush.js";
 import { History } from "./history.js";
 import { drawGuides, drawOnion } from "./guides.js";
+import { note, watch } from "./pencil-log.js";
 
 const HAS_COALESCED = "getCoalescedEvents" in PointerEvent.prototype;
 const HAS_PREDICTED = "getPredictedEvents" in PointerEvent.prototype;
@@ -193,11 +194,16 @@ export class BoardView {
 
   bind() {
     const v = this.view;
-    v.addEventListener("pointerdown", (e) => this.down(e));
-    v.addEventListener("pointermove", (e) => this.move(e));
-    v.addEventListener("pointerup", (e) => this.up(e));
-    v.addEventListener("pointercancel", (e) => this.up(e));
-    v.addEventListener("lostpointercapture", (e) => { if (e.pointerType !== "touch") this.up(e); });
+    watch(v);
+    // A failure inside a handler would silently end a stroke, so record it in the Pencil log.
+    const safe = (fn) => (e) => {
+      try { fn.call(this, e); } catch (err) { note(`ERROR in ${e.type}: ${err.message}`); }
+    };
+    v.addEventListener("pointerdown", safe(this.down));
+    v.addEventListener("pointermove", safe(this.move));
+    v.addEventListener("pointerup", safe(this.up));
+    v.addEventListener("pointercancel", safe(this.up));
+    v.addEventListener("lostpointercapture", safe((e) => { if (e.pointerType !== "touch") this.up(e); }));
     v.addEventListener("pointerleave", (e) => { if (e.pointerType !== "touch") this.cursor.hidden = true; });
     v.addEventListener("wheel", (e) => this.wheel(e), { passive: false });
     // Stop Safari's magnifier, text selection, scrolling and double-tap zoom.
@@ -216,10 +222,13 @@ export class BoardView {
       this.touches.clear();
       this.gesture = null;
     }
-    if (!this.tool) return;
+    if (!this.tool) return note("  ignored: no tool chosen");
     // A stroke still open means its end was lost (Safari dropped the lift-off): finish it, start the new one.
-    if (this.action && e.pointerType !== "mouse") this.finishAction();
-    if (this.action) return;
+    if (this.action && e.pointerType !== "mouse") {
+      note(`  previous ${this.action.kind} (#${this.action.id}) never ended — closing it`);
+      this.finishAction();
+    }
+    if (this.action) return note(`  ignored: busy with ${this.action.kind}`);
     try { this.view.setPointerCapture(e.pointerId); } catch { /* still works without */ }
     if (e.pointerType === "mouse" && (e.button === 1 || this.spaceHeld)) return this.startPan(e);
     if (e.pointerType === "mouse" && e.button !== 0) return;
@@ -233,6 +242,10 @@ export class BoardView {
     if (e.pointerType === "touch") return this.touchMove(e);
     if (e.pointerType === "pen") this.lastPen = e.timeStamp;
     const a = this.action;
+    if (a && a.id !== e.pointerId && e.buttons && !a.mismatch) {
+      a.mismatch = true;   // note it once per stroke
+      note(`  move from #${e.pointerId} while drawing with #${a.id} — not drawn`);
+    }
     if (!a || a.id !== e.pointerId) return this.hover(e);
     if (a.kind === "stroke") this.continueStroke(e);
     else if (a.kind === "move") this.continueMove(e);
@@ -337,6 +350,7 @@ export class BoardView {
       box: [Infinity, Infinity, -Infinity, -Infinity], pbox: null,
     };
     this.addSample(e, false);
+    note(`  stroke started: ${def.id} on ${name}`);
   }
 
   continueStroke(e) {
@@ -427,6 +441,7 @@ export class BoardView {
     }
     this.history.commit(a.box);
     this.hooks.onChange(a.name);
+    note(`  stroke ended: ${Math.round(a.box[2] - a.box[0])}×${Math.round(a.box[3] - a.box[1])} px`);
   }
 
   grow(box, s, r) {
@@ -474,7 +489,7 @@ export class BoardView {
     // A hand landing while the Pencil draws, or just after, is a palm.
     if (this.action?.type === "pen" || e.timeStamp - this.lastPen < PALM_GUARD_MS) {
       this.ignored.add(e.pointerId);
-      return;
+      return note("  treated as palm");
     }
     this.touches.set(e.pointerId, { x: e.clientX, y: e.clientY });
     if (!this.gesture) this.gesture = { start: e.timeStamp, max: 0, moved: false, palm: false, spread: 0 };
@@ -529,8 +544,8 @@ export class BoardView {
     if (this.touches.size === 0) {
       // Undo/redo only for a clean fingertip tap — never for a hand settling on the glass.
       const tap = !g.moved && !g.palm && g.spread < TAP_SPREAD_MS && e.timeStamp - g.start < TAP_MS && e.timeStamp - this.lastPen > PALM_GUARD_MS;
-      if (tap && g.max === 2) this.undo();
-      else if (tap && g.max >= 3) this.redo();
+      if (tap && g.max === 2) { note("  two-finger tap: undo"); this.undo(); }
+      else if (tap && g.max >= 3) { note("  three-finger tap: redo"); this.redo(); }
       this.gesture = null;
     } else {
       this.gestureBase();

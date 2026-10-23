@@ -166,6 +166,23 @@ function closeMenu() {
   document.removeEventListener("pointerdown", outside, true);
 }
 
+// Read-only text with a Copy button (copying happens inside the tap, as Safari requires).
+export function showText(title, text, { onClear } = {}) {
+  return modal((d, done) => {
+    const pre = el("pre", { className: "log", textContent: text });
+    const copy = button("Copy", async () => {
+      try {
+        await navigator.clipboard.writeText(text);
+        toast("Copied — paste it into the chat");
+      } catch {
+        toast("Couldn't copy here");
+      }
+    }, "primary");
+    const extras = onClear ? [button("Clear", () => { onClear(); done(null); }, "left")] : [];
+    d.append(el("h2", { textContent: title }), pre, row(...extras, button("Close", () => done(null)), copy));
+  });
+}
+
 export function pickFile(accept = "") {
   const input = $("file-input");
   input.value = "";

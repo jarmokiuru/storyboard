@@ -1,5 +1,8 @@
 # Changelog
 
+## 2026-10-23 — Storyboard v0.3.3
+- Pencil log (Guides → Pencil log…): records what the iPad sends for each stroke, to track down strokes that never appear. Copy it and paste it into the chat. Drawing itself is unchanged.
+
 ## 2026-10-23 — Storyboard v0.3.2
 - Fewer missing strokes: if Safari loses the end of a stroke, the next touch of the Pencil finishes it and starts a new line instead of being ignored.
 - Two-finger tap undo is stricter: only a quick tap with two fingertips landing together counts, so a hand settling on the glass no longer undoes the last line.

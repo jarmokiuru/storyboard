@@ -10,10 +10,11 @@ import { BoardView } from "./board-view.js";
 import { initStrip, renderStrip, setCurrent, setThumb, scrollToBoard } from "./strip.js";
 import { initPanel, fillPanel, updateLabel, renderLayers, togglePanel } from "./panel.js";
 import * as store from "./board-store.js";
-import { toast, confirmBox, formDialog, openMenu, shareFile, banner, pickFile } from "./ui.js";
+import { toast, confirmBox, formDialog, openMenu, shareFile, banner, pickFile, showText } from "./ui.js";
 import { exportProject } from "./projectfile.js";
 import { askOptions, makeContactSheet } from "./contact-sheet.js";
 import { importSpreadsheet, importScript } from "./importer.js";
+import { logText, clearLog } from "./pencil-log.js";
 import { VERSION } from "./version.js";
 
 const $ = (id) => document.getElementById(id);
@@ -542,6 +543,8 @@ function guidesMenu(anchor) {
     },
     { type: "sep" },
     toggle("onion", "Onion skin (previous blue, next red)"),
+    { type: "sep" },
+    { label: "Pencil log…", action: () => showText("Pencil log", `Storyboard v${VERSION}\n${navigator.userAgent}\n\n${logText()}`, { onClear: clearLog }) },
   ]);
 }
 

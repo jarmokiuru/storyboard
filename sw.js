@@ -1,7 +1,7 @@
 // Keeps a copy of the app on the device so it opens with no signal (SPEC §2).
 // With every release: change VERSION here and in js/version.js, and list any new file below.
 
-const VERSION = "0.3.2";
+const VERSION = "0.3.3";
 const CACHE = "storyboard-" + VERSION;
 const FILES = [
   "./",
@@ -23,6 +23,7 @@ const FILES = [
   "js/model.js",
   "js/offline.js",
   "js/panel.js",
+  "js/pencil-log.js",
   "js/pdf.js",
   "js/projectfile.js",
   "js/projects-screen.js",
