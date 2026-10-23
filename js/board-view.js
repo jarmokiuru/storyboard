@@ -9,6 +9,8 @@ import { drawGuides, drawOnion } from "./guides.js";
 const HAS_COALESCED = "getCoalescedEvents" in PointerEvent.prototype;
 const HAS_PREDICTED = "getPredictedEvents" in PointerEvent.prototype;
 const TAP_MS = 350;
+const TAP_SPREAD_MS = 120;   // fingers of a real two-finger tap land almost together
+const PALM_SIZE = 40;        // contact wider than this (CSS px) is a hand, not a fingertip
 const PALM_GUARD_MS = 800;   // finger taps this soon after the Pencil are treated as a resting hand
 
 export class BoardView {
@@ -195,6 +197,7 @@ export class BoardView {
     v.addEventListener("pointermove", (e) => this.move(e));
     v.addEventListener("pointerup", (e) => this.up(e));
     v.addEventListener("pointercancel", (e) => this.up(e));
+    v.addEventListener("lostpointercapture", (e) => { if (e.pointerType !== "touch") this.up(e); });
     v.addEventListener("pointerleave", (e) => { if (e.pointerType !== "touch") this.cursor.hidden = true; });
     v.addEventListener("wheel", (e) => this.wheel(e), { passive: false });
     // Stop Safari's magnifier, text selection, scrolling and double-tap zoom.
@@ -213,7 +216,10 @@ export class BoardView {
       this.touches.clear();
       this.gesture = null;
     }
-    if (this.action || !this.tool) return;
+    if (!this.tool) return;
+    // A stroke still open means its end was lost (Safari dropped the lift-off): finish it, start the new one.
+    if (this.action && e.pointerType !== "mouse") this.finishAction();
+    if (this.action) return;
     try { this.view.setPointerCapture(e.pointerId); } catch { /* still works without */ }
     if (e.pointerType === "mouse" && (e.button === 1 || this.spaceHeld)) return this.startPan(e);
     if (e.pointerType === "mouse" && e.button !== 0) return;
@@ -239,8 +245,11 @@ export class BoardView {
 
   up(e) {
     if (e.pointerType === "touch") return this.touchUp(e);
+    if (this.action?.id === e.pointerId) this.finishAction();
+  }
+
+  finishAction() {
     const a = this.action;
-    if (!a || a.id !== e.pointerId) return;
     if (a.kind === "stroke") this.endStroke();
     else if (a.kind === "move") this.endMove();
     this.action = null;
@@ -468,7 +477,9 @@ export class BoardView {
       return;
     }
     this.touches.set(e.pointerId, { x: e.clientX, y: e.clientY });
-    if (!this.gesture) this.gesture = { start: e.timeStamp, max: 0, moved: false };
+    if (!this.gesture) this.gesture = { start: e.timeStamp, max: 0, moved: false, palm: false, spread: 0 };
+    else this.gesture.spread = Math.max(this.gesture.spread, e.timeStamp - this.gesture.start);
+    if (Math.max(e.width || 0, e.height || 0) > PALM_SIZE) this.gesture.palm = true;
     this.gesture.max = Math.max(this.gesture.max, this.touches.size);
     this.gestureBase();
   }
@@ -516,7 +527,8 @@ export class BoardView {
     if (!this.touches.delete(e.pointerId) || !this.gesture) return;
     const g = this.gesture;
     if (this.touches.size === 0) {
-      const tap = !g.moved && e.timeStamp - g.start < TAP_MS && e.timeStamp - this.lastPen > PALM_GUARD_MS;
+      // Undo/redo only for a clean fingertip tap — never for a hand settling on the glass.
+      const tap = !g.moved && !g.palm && g.spread < TAP_SPREAD_MS && e.timeStamp - g.start < TAP_MS && e.timeStamp - this.lastPen > PALM_GUARD_MS;
       if (tap && g.max === 2) this.undo();
       else if (tap && g.max >= 3) this.redo();
       this.gesture = null;
