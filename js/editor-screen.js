@@ -12,6 +12,8 @@ import { initPanel, fillPanel, updateLabel, renderLayers, togglePanel } from "./
 import * as store from "./board-store.js";
 import { toast, confirmBox, formDialog, openMenu, shareFile, banner, pickFile } from "./ui.js";
 import { exportProject } from "./projectfile.js";
+import { askOptions, makeContactSheet } from "./contact-sheet.js";
+import { importSpreadsheet, importScript } from "./importer.js";
 import { VERSION } from "./version.js";
 
 const $ = (id) => document.getElementById(id);
@@ -54,6 +56,7 @@ export function initEditor({ exit }) {
   $("undo").onclick = () => view.undo();
   $("redo").onclick = () => view.redo();
   $("guides-btn").onclick = (e) => guidesMenu(e.currentTarget);
+  $("import-btn").onclick = (e) => importMenu(e.currentTarget);
   $("export-btn").onclick = (e) => exportMenu(e.currentTarget);
   $("info-btn").onclick = () => togglePanel();
   $("fit").onclick = () => view.fit();
@@ -201,6 +204,7 @@ function sceneDialog(title, s, extra) {
     { name: "aika", label: "Vuorokaudenaika", value: s.aika },
     { name: "synopsis", label: "Synopsis", type: "textarea", value: s.synopsis },
     { name: "henkilot", label: "Henkilöt", value: s.henkilot },
+    { name: "actBefore", label: "Act divider before this scene (e.g. ACT 2)", value: s.actBefore || "" },
   ], { ok: "Save", extra });
 }
 
@@ -520,8 +524,38 @@ function guidesMenu(anchor) {
   ]);
 }
 
+function importMenu(anchor) {
+  openMenu(anchor, [
+    { label: "Breakdown or shot list (.xlsx)…", action: async () => {
+      const file = await pickFile(".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+      if (file) afterImport(await importSpreadsheet(project, file));
+    } },
+    { label: "Script file (.fountain, .txt)…", action: async () => {
+      const file = await pickFile();
+      if (file) afterImport(await importScript(project, await file.text()));
+    } },
+    { label: "Paste script text…", action: async () => {
+      const v = await formDialog("Paste script text", [{ name: "text", label: "Script", type: "textarea", rows: 12, value: "" }], { ok: "Find scenes" });
+      if (v) afterImport(await importScript(project, v.text));
+    } },
+    { type: "sep" },
+    { type: "note", label: "Imports add and fill in; drawings are never changed." },
+  ]);
+}
+
+async function afterImport(changed) {
+  metaDirty = true;   // remembered column choices
+  if (changed) edited();
+  await flush();
+  if (!changed) return;
+  refreshStrip();
+  if (board) fillPanel(project, board);
+  toast("Imported.");
+}
+
 function exportMenu(anchor) {
   openMenu(anchor, [
+    { label: "Contact sheet PDF…", action: exportContactSheet },
     { label: "Project file (.storyboard)…", action: exportProjectFile },
     { label: "This board as PNG…", action: exportPng },
     { type: "sep" },
@@ -543,6 +577,22 @@ async function exportProjectFile() {
   project.firstEditSinceExport = null;
   await db.putProject(project);
   exportNote();
+}
+
+async function exportContactSheet() {
+  const o = await askOptions(project);
+  if (!o) return;
+  project.pdfOptions = o;
+  metaDirty = true;
+  await flush();
+  toast("Making PDF…");
+  try {
+    const blob = await makeContactSheet(project, o);
+    const name = `${safeName(project.title)} ${o.kind === "blank" ? "worksheet" : "storyboard"}.pdf`;
+    await shareFile(blob, name, "application/pdf");
+  } catch (err) {
+    toast("Couldn't make the PDF: " + err.message);
+  }
 }
 
 async function exportPng() {

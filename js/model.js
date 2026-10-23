@@ -27,13 +27,13 @@ function newLayers() {
 }
 
 export function newScene(fields = {}) {
-  return { id: uid(), kohtaus: "", intExt: "INT", lokaatio: "", aika: "", synopsis: "", henkilot: "", collapsed: false, ...fields };
+  return { id: uid(), kohtaus: "", intExt: "INT", lokaatio: "", aika: "", synopsis: "", henkilot: "", actBefore: "", collapsed: false, ...fields };
 }
 
 export function newBoard(sceneId, kuva, newShot) {
   return {
     id: uid(), sceneId, kuva: String(kuva), newShot,
-    kuvakoko: "", lens: "", movement: "", dialogue: "", action: "", notes: "",
+    kuvakoko: "", sisalto: "", lens: "", movement: "", dialogue: "", action: "", notes: "",
     horizon: 0.5, layers: newLayers(),
   };
 }
@@ -75,7 +75,7 @@ export function nextKuva(p, sceneId) {
 
 export function insertBoardAfter(p, ref, newShot) {
   const b = newBoard(ref.sceneId, newShot ? nextKuva(p, ref.sceneId) : ref.kuva, newShot);
-  if (!newShot) Object.assign(b, { kuvakoko: ref.kuvakoko, lens: ref.lens, movement: ref.movement });
+  if (!newShot) Object.assign(b, { kuvakoko: ref.kuvakoko, sisalto: ref.sisalto ?? "", lens: ref.lens, movement: ref.movement });
   p.boards.splice(p.boards.indexOf(ref) + 1, 0, b);
   return b;
 }

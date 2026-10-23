@@ -81,6 +81,12 @@ export function renderStrip(el, project, currentId, thumbs) {
   el.style.setProperty("--ratio", project.ratio);
   for (const scene of project.scenes) {
     const boards = sceneBoards(project, scene.id);
+    if (scene.actBefore) {
+      const act = document.createElement("div");
+      act.className = "act";
+      act.textContent = scene.actBefore;
+      el.append(act);
+    }
     const g = document.createElement("div");
     g.className = "scene" + (scene.collapsed ? " collapsed" : "");
     g.dataset.id = scene.id;

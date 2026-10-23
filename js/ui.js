@@ -66,13 +66,31 @@ export function choose(text, options) {
   });
 }
 
-// fields: [{ name, label, type: "text"|"textarea"|"select", value, options }]
-// options are strings or [value, label] pairs. extra: [{ label, value }] buttons that resolve { __action: value }.
+// fields: [{ name, label, type: "text"|"textarea"|"select"|"checkbox"|"checklist", value, options, hint }]
+// options are strings or [value, label] pairs. A checkbox gives true/false; a checklist gives the ticked values.
+// extra: [{ label, value }] buttons that resolve { __action: value }.
 export function formDialog(title, fields, { ok = "Save", extra = [] } = {}) {
   return modal((d, done) => {
     const form = el("form", { method: "dialog" }, el("h2", { textContent: title }));
     for (const f of fields) {
       let input;
+      if (f.type === "note") {
+        form.append(el("p", { className: "form-note", textContent: f.label }));
+        continue;
+      }
+      if (f.type === "checkbox") {
+        form.append(el("label", { className: "check" }, el("input", { type: "checkbox", name: f.name, checked: !!f.value }), el("span", { textContent: f.label })));
+        continue;
+      }
+      if (f.type === "checklist") {
+        const box = el("fieldset", { className: "checklist" }, el("legend", { textContent: f.label }));
+        for (const o of f.options) {
+          const [value, label] = Array.isArray(o) ? o : [o, o];
+          box.append(el("label", { className: "check" }, el("input", { type: "checkbox", name: f.name, value, checked: f.value.includes(value) }), el("span", { textContent: label })));
+        }
+        form.append(box);
+        continue;
+      }
       if (f.type === "select") {
         input = el("select", { name: f.name });
         for (const o of f.options) {
@@ -80,7 +98,7 @@ export function formDialog(title, fields, { ok = "Save", extra = [] } = {}) {
           input.append(el("option", { value, textContent: label, selected: String(f.value) === value }));
         }
       } else if (f.type === "textarea") {
-        input = el("textarea", { name: f.name, rows: 3, value: f.value ?? "" });
+        input = el("textarea", { name: f.name, rows: f.rows || 3, value: f.value ?? "" });
       } else {
         input = el("input", { name: f.name, value: f.value ?? "", autocomplete: "off" });
       }
@@ -90,7 +108,15 @@ export function formDialog(title, fields, { ok = "Save", extra = [] } = {}) {
     form.append(row(...extras, button("Cancel", () => done(null)), el("button", { type: "submit", textContent: ok, className: "primary" })));
     form.onsubmit = (e) => {
       e.preventDefault();
-      done(Object.fromEntries(new FormData(form)));
+      const data = new FormData(form);
+      const values = {};
+      for (const f of fields) {
+        if (f.type === "note") continue;
+        if (f.type === "checkbox") values[f.name] = data.has(f.name);
+        else if (f.type === "checklist") values[f.name] = data.getAll(f.name);
+        else values[f.name] = data.get(f.name) ?? "";
+      }
+      done(values);
     };
     d.append(form);
   });

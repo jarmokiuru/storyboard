@@ -3,7 +3,7 @@
 import { LAYERS, LAYER_LABELS, heading, boardLabel, sceneOf } from "./model.js";
 
 const $ = (id) => document.getElementById(id);
-const FIELDS = ["kuva", "kuvakoko", "lens", "movement", "dialogue", "action", "notes"];
+const FIELDS = ["kuva", "kuvakoko", "sisalto", "lens", "movement", "dialogue", "action", "notes"];
 
 export function initPanel(h) {
   for (const f of FIELDS) $("f-" + f).addEventListener("input", (e) => h.edit(f, e.target.value));
