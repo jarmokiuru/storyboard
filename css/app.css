@@ -117,6 +117,13 @@ select { -webkit-appearance: none; appearance: none; padding-right: 22px; backgr
 #export-note { font-size: 13px; white-space: nowrap; }
 .narrow-only { display: none; }
 
+/* Hide panel / Focus: the frame grows to fill the space (wide screens; on narrow ones the panel is a sheet). */
+@media (min-width: 1001px) and (orientation: landscape) {
+  #editor-screen.no-panel { grid-template-columns: 96px minmax(0, 1fr); grid-template-areas: "bar bar" "tools stage" "strip strip"; }
+  #editor-screen.no-panel #panel { display: none; }
+}
+#editor-screen.focus #strip { display: none; }
+
 #tools {
   grid-area: tools;
   display: flex;
@@ -334,6 +341,7 @@ dialog label span { color: var(--muted); }
     grid-template-areas: "bar bar" "tools stage" "strip strip";
   }
   .narrow-only { display: inline-block; }
+  .wide-only { display: none; }
   #export-note { display: none; }
   #panel {
     position: fixed;

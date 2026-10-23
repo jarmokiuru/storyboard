@@ -30,6 +30,9 @@ let loadToken = 0;
 let saveTimer = null;
 let metaDirty = false;
 const settings = loadToolSettings();
+const LAYOUT_KEY = "storyboard.layout";
+let layout = { panelHidden: false, focus: false };
+try { Object.assign(layout, JSON.parse(localStorage.getItem(LAYOUT_KEY))); } catch { /* defaults */ }
 const thumbs = new Map();   // board id → image address for the strip
 const dirty = new Set();    // layers of the current board not yet saved
 
@@ -59,6 +62,9 @@ export function initEditor({ exit }) {
   $("import-btn").onclick = (e) => importMenu(e.currentTarget);
   $("export-btn").onclick = (e) => exportMenu(e.currentTarget);
   $("info-btn").onclick = () => togglePanel();
+  $("panel-btn").onclick = () => setLayout({ panelHidden: !(layout.panelHidden || layout.focus), focus: false });
+  $("focus-btn").onclick = () => setLayout({ focus: !layout.focus });
+  setLayout({});
   $("fit").onclick = () => view.fit();
   $("scene-jump").onchange = (e) => selectBoard(sceneBoards(project, e.target.value)[0], true);
 
@@ -257,6 +263,19 @@ function toggleScene(id) {
   metaDirty = true;
   saveSoon();
   refreshStrip();
+}
+
+// Hide panel / Focus mode: more room for the frame.
+function setLayout(change) {
+  Object.assign(layout, change);
+  const screen = $("editor-screen");
+  screen.classList.toggle("no-panel", layout.panelHidden || layout.focus);
+  screen.classList.toggle("focus", layout.focus);
+  $("panel-btn").textContent = layout.panelHidden || layout.focus ? "Show panel" : "Hide panel";
+  $("focus-btn").classList.toggle("on", layout.focus);
+  if (layout.focus) togglePanel(false);
+  try { localStorage.setItem(LAYOUT_KEY, JSON.stringify(layout)); } catch { /* not essential */ }
+  requestAnimationFrame(() => project && view.fit());
 }
 
 function refreshStrip() {
@@ -476,6 +495,8 @@ function keyDown(e) {
   else if (e.key === "ArrowLeft") step(-1);
   else if (e.key === "ArrowRight") step(1);
   else if (key === "n") newBoard(!e.shiftKey);
+  else if (key === "f") setLayout({ focus: !layout.focus });
+  else if (key === "p") setLayout({ panelHidden: !(layout.panelHidden || layout.focus), focus: false });
   else if (e.key === "Backspace" || e.key === "Delete") clearLayer(false);
   else if (e.key === " ") { e.preventDefault(); view.spaceHeld = true; }
   else return;

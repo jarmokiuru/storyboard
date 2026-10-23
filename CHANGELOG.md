@@ -1,5 +1,9 @@
 # Changelog
 
+## 2026-10-23 — Storyboard v0.3.1
+- Hide panel / Show panel button (or P on the Mac): the frame grows into the space.
+- Focus button (or F): hides the panel and the board strip for the biggest frame; tap again to bring them back. Remembered between sessions.
+
 ## 2026-10-23 — Storyboard v0.3.0 (phase 3: PDF and imports)
 - Contact-sheet PDF (Export → Contact sheet PDF): 1, 2, 3, 4, 6, 8, 9 or 12 boards per page or a custom rows × columns grid; A4 or Letter; landscape or portrait; choose scenes; choose what prints under each frame (scene heading, Kuva #, Kuvakoko, Lens/Focal, Movement, Sisältö, dialogue, action, notes); each scene on a new page; DRAFT mark. Settings are remembered per project.
 - Blank worksheet PDF: empty frames at the project's aspect ratio with writing lines.
