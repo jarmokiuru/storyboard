@@ -1,5 +1,8 @@
 # Changelog
 
+## 2026-10-23 — Storyboard v0.3.4
+- Pencil log: large touches the iPad cancels by itself (a resting hand, a grip on the edge) are folded into one summary line, so they no longer push the Pencil events out of the log. It now keeps 300 lines.
+
 ## 2026-10-23 — Storyboard v0.3.3
 - Pencil log (Guides → Pencil log…): records what the iPad sends for each stroke, to track down strokes that never appear. Copy it and paste it into the chat. Drawing itself is unchanged.
 

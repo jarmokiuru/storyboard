@@ -5,7 +5,7 @@ import { LAYERS } from "./model.js";
 import { readSample, widthFor, drawSegment, drawDot, notePressure, reach } from "./brush.js";
 import { History } from "./history.js";
 import { drawGuides, drawOnion } from "./guides.js";
-import { note, watch } from "./pencil-log.js";
+import { note, watch, isBigTouch } from "./pencil-log.js";
 
 const HAS_COALESCED = "getCoalescedEvents" in PointerEvent.prototype;
 const HAS_PREDICTED = "getPredictedEvents" in PointerEvent.prototype;
@@ -489,7 +489,8 @@ export class BoardView {
     // A hand landing while the Pencil draws, or just after, is a palm.
     if (this.action?.type === "pen" || e.timeStamp - this.lastPen < PALM_GUARD_MS) {
       this.ignored.add(e.pointerId);
-      return note("  treated as palm");
+      if (!isBigTouch(e)) note("  treated as palm");
+      return;
     }
     this.touches.set(e.pointerId, { x: e.clientX, y: e.clientY });
     if (!this.gesture) this.gesture = { start: e.timeStamp, max: 0, moved: false, palm: false, spread: 0 };
