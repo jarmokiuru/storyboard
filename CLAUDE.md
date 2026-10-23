@@ -35,4 +35,5 @@ An offline storyboard app for Jarmo Kiuru, a cinematographer, modelled on Wonder
 - 2026-10-23 — Moving work between devices is by exported project file, not live sync.
 
 ## Status
-- 2026-10-23 — Spec written. Nothing built yet. Next: phase 1, the pencil test page (SPEC §9).
+- 2026-10-23 — Spec written.
+- 2026-10-23 — Phase 1 pencil test built (`pencil-test/`, v0.1.0) on branch `phase-1-pencil-test`. Checked in a desktop browser with simulated Pencil input: pressure width, tilt shading and palm rejection work. Not yet checked: real Apple Pencil, offline copy (the test browser blocks it), home-screen mode. Needs GitHub Pages switched on (Settings → Pages → main, root). Home-screen exemption from Safari's 7-day storage deletion: inferred from WebKit statements (2020) and a WebKit bug comment (2021), no formal Apple doc found; the page shows whether storage is promised. Safari 18.2+ gives extra Pencil samples between frames; those samples lack pointer IDs, so the code reads them from the parent event. Next: Jarmo's iPad results, then phase 2.
