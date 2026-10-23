@@ -1,5 +1,9 @@
 # Changelog
 
+## 2026-10-23 — Storyboard v0.3.6
+- Shot data sheet (Export → Shot data sheet .xlsx / .csv): one row per board with Kohtaus #, Kuva #, Board (1, 1b…), Kuvakoko, Lens/Focal, camera height (cm), tilt (°), Movement and the board's image file name. Camera height and tilt stay empty until the Shot Generator (phase 4) fills them.
+- All boards as PNGs (.zip): every board at full size, named as in the sheet (e.g. 1-1b.png). The single-board PNG uses the same name.
+
 ## 2026-10-23 — Storyboard v0.3.5
 - Pencil log also records the Pencil as reported through Safari's older touch channel, to tell whether a missing stroke was dropped by Safari or never sent by the iPad.
 

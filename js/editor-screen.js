@@ -15,6 +15,7 @@ import { exportProject } from "./projectfile.js";
 import { askOptions, makeContactSheet } from "./contact-sheet.js";
 import { importSpreadsheet, importScript } from "./importer.js";
 import { logText, clearLog } from "./pencil-log.js";
+import { shotSheetXlsx, shotSheetCsv, boardImagesZip, imageName } from "./shot-sheet.js";
 import { VERSION } from "./version.js";
 
 const $ = (id) => document.getElementById(id);
@@ -582,6 +583,9 @@ function exportMenu(anchor) {
     { label: "Contact sheet PDF…", action: exportContactSheet },
     { label: "Project file (.storyboard)…", action: exportProjectFile },
     { label: "This board as PNG…", action: exportPng },
+    { label: "All boards as PNGs (.zip)…", action: exportAllPngs },
+    { label: "Shot data sheet (.xlsx)…", action: () => exportShotSheet("xlsx") },
+    { label: "Shot data sheet (.csv)…", action: () => exportShotSheet("csv") },
     { type: "sep" },
     { type: "note", label: exportNoteText() },
     { type: "note", label: "Storyboard v" + VERSION },
@@ -619,11 +623,24 @@ async function exportContactSheet() {
   }
 }
 
+async function exportShotSheet(kind) {
+  await flush();
+  const name = `${safeName(project.title)} shot data.${kind}`;
+  if (kind === "xlsx") await shareFile(await shotSheetXlsx(project), name, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+  else await shareFile(shotSheetCsv(project), name, "text/csv");
+}
+
+async function exportAllPngs() {
+  await flush();
+  toast("Preparing pictures…");
+  const blob = await boardImagesZip(project, (done, total) => { if (done % 5 === 0) toast(`Preparing pictures… ${done} of ${total}`); });
+  await shareFile(blob, `${safeName(project.title)} boards.zip`, "application/zip");
+}
+
 async function exportPng() {
   await flush();
   const blob = await store.canvasBlob(view.flatten(BOARD_WIDTH));
-  const scene = sceneOf(project, board);
-  await shareFile(blob, `${safeName(project.title)} ${scene.kohtaus || "x"}-${boardLabel(project, board)}.png`, "image/png");
+  await shareFile(blob, imageName(project, board), "image/png");
 }
 
 function exportNoteText() {
