@@ -120,7 +120,8 @@ Storyboarder's set [verified: light pencil, pencil, pen, brush, eraser, note pen
 - Clear layer: Delete/Backspace, with a confirm on iPad.
 
 ### 6.3 Apple Pencil
-- Pointer Events with `pointerType === "pen"`: use `pressure` for width/opacity and tilt (`altitudeAngle`/`azimuthAngle` or `tiltX`/`tiltY`) for the brush shape [verify at build on the iPad Air M3 in Safari; test page first, before building the tools].
+- Pointer Events with `pointerType === "pen"`. Jarmo's Apple Pencil (USB-C) has **no pressure** [verified: apple.com, and the phase 1 test read a fixed 0.30]. Line weight comes from **tilt** (`altitudeAngle`/`azimuthAngle`, or `tiltX`/`tiltY`: upright = thin, tipped = broad soft lead) and **stroke speed** (fast = thinner, tapered) [decision]. If a pen reports pressure that varies, use it automatically for width/opacity.
+- Phase 1 results on the iPad Air M3, Safari 27: ~250 samples/s, extra samples between frames available, stroke prediction available and feels good (keep on), palm rejection works [verified].
 - Palm rejection: while a pen is in use, ignore single-finger touches on the canvas. Fingers pan (one finger when no pen has been seen this session; otherwise two) and pinch-zoom.
 - Strokes are smoothed and drawn at canvas resolution ≥ 2× the display size so PDFs print cleanly.
 - Pencil double-tap and squeeze gestures are probably not available to web pages — don't plan around them.
