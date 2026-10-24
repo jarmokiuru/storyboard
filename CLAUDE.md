@@ -1,6 +1,6 @@
 # Project note for Claude
 
-Read this first in every session, then `SPEC.md`. Update the **Decisions** and **Status** sections at the end of every session that changes something.
+Read this first in every session, then `SPEC.md`, then `INTEGRATION.md` (how the app connects to Jarmo's other tools; written from his chat side, so check it for new items). Update the **Decisions** and **Status** sections at the end of every session that changes something.
 
 ## What this is
 An offline storyboard app for Jarmo Kiuru, a cinematographer, modelled on Wonder Unit's Storyboarder. Installed from GitHub Pages to his iPad home screen. Full requirements: `SPEC.md`.
@@ -38,6 +38,7 @@ An offline storyboard app for Jarmo Kiuru, a cinematographer, modelled on Wonder
 - 2026-10-24 — Shot Generator: pinch/scroll in the camera view zooms the lens; W/A/S/D + arrows move the camera, as in Storyboarder.
 - 2026-10-25 — Shot Generator camera view: dragging moves the picture with the finger (drag right = pan left, drag up = tilt down).
 - 2026-10-24 — Board-editor keys match Storyboarder 3.0's key map (see Status for the list). Colour pick is hold-I-and-click, since Alt is Storyboarder's quick erase.
+- 2026-10-25 — No new columns in Shot List.xlsx. Camera height/tilt/pan/position stay in the app only; only Lens/Focal may flow back (merged on the chat side). Details: `INTEGRATION.md`.
 - 2026-10-23 — Line weight comes from tilt and stroke speed (his Apple Pencil (USB-C) has no pressure). If a pen reports varying pressure (e.g. a Pencil Pro), use pressure automatically, no setting needed.
 
 ## Status
@@ -75,3 +76,4 @@ An offline storyboard app for Jarmo Kiuru, a cinematographer, modelled on Wonder
 - 2026-10-25 — v0.5.1 from Jarmo's iPad notes: Backspace while typing a table size deleted the table (cause: `Things` called back after every `put`, which rebuilt the selected-item panel and dropped focus; now the panel rebuilds only when a model finishes loading — `onLoaded`). Number rows (`numberRow` in `placing.js`): slider + box + ↑/↓ (Shift ×10) + scroll. The small plan in the camera view now grabs pieces and the camera (`planGrab` in `screen.js`); grab radius capped at 0.6 m and pieces win over the aim handle; `down()` uses `stage.layout()` and `topToGround` re-aims the plan camera, so touches never depend on the last drawn frame. Checked in a desktop browser. Next: step 3, poses.
 - 2026-10-25 — v0.5.2 from Jarmo's notes (he confirmed v0.5.1 items 2–5 work on the iPad): ↺ reset buttons on camera sliders and piece/figure values; elevation `item.y` (cm) for objects and figures; sliders get `touch-action: none` and panels `overscroll-behavior: contain` so slider drags don't scroll the sidebar ("it should remain fixed whenever it is visible, only disappear with Focus"); Focus button in the Shot Generator; buttons grouped with `.sep` dividers, faint borders and joined segmented switches. Next: step 3, poses.
 - 2026-10-25 — v0.5.2 checked on the iPad (slider ↺ + steady sidebar, elevation, Focus all work). v0.5.3 adds Save as new board (`saveAsNew` hook in `editor-screen.js` → `insertBoardAfter(…, true)`, the Shot Generator then works on the new board). Testing note: the test browser now registers the offline copy on localhost, so unregister the service worker and clear caches before testing a new version there. Next: step 3, poses.
+- 2026-10-25 — `INTEGRATION.md` added from the chat side: workflow links and app work in priority order (lens sync, project-format doc, starter-file import with merge, renumber list, location files). Not started.
