@@ -1,5 +1,14 @@
 # Changelog
 
+## 2026-10-24 — Storyboard v0.5.0 (board keys like Storyboarder; Shot Generator step 2: furniture and figures)
+- Board editor keys now match Storyboarder 3.0: 1 light pencil, 2 brush, 4 pencil, 5 pen, 6 note pen, 7 eraser (3 is Storyboarder's tone tool, not built); 8/9/0 tool colours; N new board, Shift-N new board before, D duplicate, / toggle new shot, Alt-←/→ move board, Cmd-←/→ previous/next scene, O onion skin, Tab cycle view, Backspace clear all drawing layers (one undo brings them back), Alt-Backspace clear the active layer, Alt-drag quick erase, Cmd-0 / Cmd-+ / Cmd-- zoom, Cmd-P contact sheet, Cmd-Shift-P blank worksheet, Cmd-Backspace delete board. Cmd-K lists all keys. Colour pick moved to holding I and clicking (Alt now erases, as in Storyboarder).
+- Shot Generator: Add menu with the figures named in the scene's Henkilöt, any other figure (body type and height in cm), and 37 pieces of furniture and props.
+- Furniture belongs to the set: placed once, it's there for every scene at that location. Width, depth and height can be typed in cm.
+- Figures belong to the board; a new board starts with the previous board's figures. Each figure has a name and colour tag, shown on the plan.
+- Tap something to choose it; drag it in the top view to move it; Turn slider; Delete (or Backspace on the Mac). The readout shows the camera-to-subject distance for a chosen figure.
+- Pinch fix: lifting one finger before the other no longer makes the view jump or the lens snap to its widest.
+- The 2017 Mac draws lighter figures (detail level 2), the iPad full detail.
+
 ## 2026-10-24 — Storyboard v0.4.2
 - Shot Generator zoom: pinch or scroll in the camera view zooms the lens (focal length); in the top and orbit views it zooms the view.
 - Camera moves with W/A/S/D or the arrow keys, smoothly while held, R/F up and down, Shift faster — as in Storyboarder's Shot Generator. Keys keep working after touching a slider or lens button.

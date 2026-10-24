@@ -33,8 +33,9 @@ const LIGHT = [0.75, 0.75, 0.78];
 
 // ---------- dialog ----------
 
-export async function askOptions(project) {
-  const o = { ...DEFAULTS, ...project.pdfOptions };
+// preset: values to start from this time, e.g. { kind: "blank" } for Cmd-Shift-P.
+export async function askOptions(project, preset = {}) {
+  const o = { ...DEFAULTS, ...project.pdfOptions, ...preset };
   if (project.pdfOptions && !project.pdfOptions.fields.includes("sisalto")) o.fields = [...o.fields, "sisalto"];
   const sceneIds = project.scenes.map((s) => s.id);
   const v = await formDialog("Contact sheet PDF", [

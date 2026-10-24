@@ -76,7 +76,7 @@
       <label><span>Scene</span><select id="f-scene"></select></label>
     </section>
     <section class="buttons">
-      <button id="new-board" title="Another board in this shot (Shift-N)">New board</button>
+      <button id="new-board" title="Another board in this shot">New board</button>
       <button id="new-shot" title="Next Kuva # (N)">New shot</button>
       <button id="dup-board">Duplicate</button>
       <button id="del-board" class="danger">Delete board</button>
@@ -110,6 +110,7 @@
       <button data-view="orbit">Orbit</button>
     </div>
     <span class="spacer"></span>
+    <button id="sg-add">Add</button>
     <button id="sg-set">Set…</button>
     <button id="sg-save" class="primary">Save to board</button>
   </header>
@@ -118,6 +119,7 @@
     <div id="sg-readout"></div>
   </main>
   <aside id="sg-panel">
+    <section id="sg-selected" hidden></section>
     <label><span>Camera format</span><select id="sg-sensor"></select></label>
     <div class="sg-lens">
       <span class="muted">Lens (mm)</span>
@@ -126,7 +128,7 @@
     </div>
     <div id="sg-sliders"></div>
     <button id="sg-reset">Reset camera</button>
-    <p class="muted sg-hint">Camera view: drag to pan and tilt; pinch or scroll to zoom the lens. Top view: drag the camera to move it, the tip of its yellow lines to aim it, the floor to look around; pinch or scroll to zoom. Tap the small view to swap.<br>Mac keys: W A S D or arrows move, R / F up and down, hold Shift to go faster, Z / X roll, Esc back.</p>
+    <p class="muted sg-hint">Camera view: drag to pan and tilt; pinch or scroll to zoom the lens. Top view: drag the camera to move it, the tip of its yellow lines to aim it, the floor to look around; pinch or scroll to zoom. Tap the small view to swap. Add furniture and figures with Add; tap one to choose it, drag it in the top view to move it.<br>Mac keys: W A S D or arrows move, R / F up and down, hold Shift to go faster, Z / X roll, Esc back.</p>
   </aside>
 </section>
 

@@ -28,8 +28,8 @@ export class History {
     this.beforeCtx.drawImage(canvas, 0, 0);
   }
 
-  // box: [left, top, right, bottom] of what changed.
-  commit(box) {
+  // box: [left, top, right, bottom] of what changed. group: steps sharing a group undo together.
+  commit(box, group = null) {
     const c = this.canvas;
     const x = Math.max(0, Math.floor(box[0]));
     const y = Math.max(0, Math.floor(box[1]));
@@ -37,7 +37,7 @@ export class History {
     const h = Math.min(c.height, Math.ceil(box[3])) - y;
     if (w <= 0 || h <= 0) return;
     this.undoStack.push({
-      name: this.name, x, y,
+      name: this.name, x, y, group,
       before: this.beforeCtx.getImageData(x, y, w, h),
       after: c.getContext("2d").getImageData(x, y, w, h),
     });
@@ -48,20 +48,24 @@ export class History {
     }
   }
 
-  // Returns the name of the layer that changed, or null.
+  // Returns the names of the layers that changed (empty when there's nothing to undo).
   undo(ctxs) {
-    const s = this.undoStack.pop();
-    if (!s) return null;
-    ctxs[s.name].putImageData(s.before, s.x, s.y);
-    this.redoStack.push(s);
-    return s.name;
+    return this.move(this.undoStack, this.redoStack, (s) => ctxs[s.name].putImageData(s.before, s.x, s.y));
   }
 
   redo(ctxs) {
-    const s = this.redoStack.pop();
-    if (!s) return null;
-    ctxs[s.name].putImageData(s.after, s.x, s.y);
-    this.undoStack.push(s);
-    return s.name;
+    return this.move(this.redoStack, this.undoStack, (s) => ctxs[s.name].putImageData(s.after, s.x, s.y));
+  }
+
+  move(from, to, paint) {
+    const names = [];
+    const first = from.at(-1);
+    while (from.length && (names.length === 0 || (first.group && from.at(-1).group === first.group))) {
+      const s = from.pop();
+      paint(s);
+      to.push(s);
+      names.push(s.name);
+    }
+    return names;
   }
 }

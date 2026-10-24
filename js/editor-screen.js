@@ -3,7 +3,7 @@
 import * as db from "./db.js";
 import {
   LAYER_LABELS, BOARD_WIDTH, boardHeight, heading, boardLabel, orderedBoards, sceneBoards, sceneOf, ago,
-  insertBoardAfter, duplicateBoard, removeBoard, moveBoard, moveBoardToScene, addScene, removeScene, newScene, nextSceneNumber,
+  insertBoardAfter, insertBoardBefore, toggleNewShot, nudgeBoard, duplicateBoard, removeBoard, moveBoard, moveBoardToScene, addScene, removeScene, newScene, nextSceneNumber,
 } from "./model.js";
 import { TOOLS, MOVE, loadToolSettings, saveToolSettings } from "./brush.js";
 import { BoardView } from "./board-view.js";
@@ -75,7 +75,7 @@ export function initEditor({ exit }) {
   document.addEventListener("visibilitychange", () => { if (document.hidden) flush(); });
   window.addEventListener("pagehide", () => flush());
   document.addEventListener("keydown", keyDown);
-  document.addEventListener("keyup", (e) => { if (e.key === " ") view.spaceHeld = false; });
+  document.addEventListener("keyup", keyUp);
   document.addEventListener("paste", pastePhoto);
 }
 
@@ -463,6 +463,8 @@ function setTool(id) {
     }
   }
   view.tool = def ? { def, size: def.sizes[settings[id].size], color: settings[id].color } : { def: MOVE };
+  const eraser = TOOLS.find((t) => t.id === "eraser");
+  view.quickEraser = { def: eraser, size: eraser.sizes[settings.eraser.size], color: "#000" };
 }
 
 function changeSize(delta) {
@@ -475,35 +477,137 @@ function changeSize(delta) {
 
 function pickedColour(hex) {
   const def = TOOLS.find((t) => t.id === toolId);
-  if (!def || !def.colors.length) return toast("Pick a drawing tool first, then Option-click a colour.");
+  if (!def || !def.colors.length) return toast("Pick a drawing tool first, then hold I and click a colour.");
   settings[toolId].color = hex;
   saveToolSettings(settings);
   setTool(toolId);
 }
 
-// Mac keyboard shortcuts (SPEC §6.2).
+// Mac keys, matching Storyboarder 3.0's key map (read from the installed app, 2026-10-24). Cmd-K lists them.
+const KEY_LIST = `Drawing
+  1 light pencil · 2 brush · 4 pencil · 5 pen · 6 note pen · 7 eraser · V move/scale
+  8 / 9 / 0  first, second, third colour of the tool
+  [ and ]  smaller / bigger
+  Shift  straight line · Alt-drag  quick erase · Space-drag  pan
+  Cmd-drag  move layer · Cmd-Alt-drag  scale layer · hold I and click  pick colour
+  Backspace  clear all drawing layers · Alt-Backspace  clear the active layer
+
+Boards
+  N  new board (next Kuva #) · Shift-N  new board before this one (same shot)
+  /  toggle "new shot" on this board · D  duplicate · Cmd-Backspace  delete board
+  ← →  previous / next board · Alt-← →  move board left / right
+  Cmd-← →  previous / next scene
+
+View
+  O  onion skin · Tab  cycle view (panel, no panel, focus) · Shift-Tab  back
+  P  hide panel · F  focus
+  Cmd-0  fit · Cmd-+ / Cmd--  zoom
+  Cmd-Z  undo · Cmd-Shift-Z  redo
+  Cmd-P  contact sheet PDF · Cmd-Shift-P  blank worksheet
+  Cmd-K  this list`;
+
+const VIEW_MODES = [{ panelHidden: false, focus: false }, { panelHidden: true, focus: false }, { panelHidden: false, focus: true }];
+
 function keyDown(e) {
   if ($("editor-screen").hidden || !board || !$("shotgen").hidden) return;
   if (e.target.matches?.("input, textarea, select") || document.querySelector("dialog[open]")) return;
   const key = e.key.toLowerCase();
-  if (e.metaKey || e.ctrlKey) {
-    if (key === "z") { e.preventDefault(); e.shiftKey ? view.redo() : view.undo(); }
-    else if (key === "y") { e.preventDefault(); view.redo(); }
+  const cmd = e.metaKey || e.ctrlKey;
+  const run = (fn) => { e.preventDefault(); fn(); };
+
+  if (cmd) {
+    if (key === "z") return run(() => (e.shiftKey ? view.redo() : view.undo()));
+    if (key === "y") return run(() => view.redo());
+    if (key === "k") return run(() => showText("Keys", KEY_LIST));
+    if (key === "p") return run(() => exportContactSheet(e.shiftKey ? { kind: "blank" } : {}));
+    if (key === "s") return run(() => flush().then(() => toast("Saved — the app saves as you work. Export a project file for a backup.")));
+    if (key === "0") return run(() => view.fit());
+    if (key === "=" || key === "+") return run(() => zoomView(1.25));
+    if (key === "-") return run(() => zoomView(0.8));
+    if (e.key === "ArrowLeft") return run(() => stepScene(-1));
+    if (e.key === "ArrowRight") return run(() => stepScene(1));
+    if (e.key === "Backspace" || e.key === "Delete") return run(deleteCurrent);
     return;
   }
+  if (key === "i") { view.pickHeld = true; return; }
   const tool = [...TOOLS, MOVE].find((t) => t.key === key);
-  if (tool) return setTool(tool.id);
-  if (e.key === "[") changeSize(-1);
-  else if (e.key === "]") changeSize(1);
-  else if (e.key === "ArrowLeft") step(-1);
-  else if (e.key === "ArrowRight") step(1);
-  else if (key === "n") newBoard(!e.shiftKey);
-  else if (key === "f") setLayout({ focus: !layout.focus });
-  else if (key === "p") setLayout({ panelHidden: !(layout.panelHidden || layout.focus), focus: false });
-  else if (e.key === "Backspace" || e.key === "Delete") clearLayer(false);
-  else if (e.key === " ") { e.preventDefault(); view.spaceHeld = true; }
-  else return;
-  e.preventDefault();
+  if (tool) return run(() => setTool(tool.id));
+  const colour = { 8: 0, 9: 1, 0: 2 }[e.key];
+  if (colour !== undefined) return run(() => pickPaletteColour(colour));
+  if (e.key === "[") return run(() => changeSize(-1));
+  if (e.key === "]") return run(() => changeSize(1));
+  if (e.key === "ArrowLeft") return run(() => (e.altKey ? moveCurrent(-1) : step(-1)));
+  if (e.key === "ArrowRight") return run(() => (e.altKey ? moveCurrent(1) : step(1)));
+  if (key === "n") return run(() => (e.shiftKey ? newBoardBefore() : newBoard(true)));
+  if (key === "d") return run(duplicateCurrent);
+  if (e.key === "/") return run(toggleShot);
+  if (key === "o") return run(() => toggleGuide("onion"));
+  if (e.key === "Tab") return run(() => cycleView(e.shiftKey ? -1 : 1));
+  if (key === "f") return run(() => setLayout({ focus: !layout.focus }));
+  if (key === "p") return run(() => setLayout({ panelHidden: !(layout.panelHidden || layout.focus), focus: false }));
+  if (e.key === "Backspace" || e.key === "Delete") return run(() => (e.altKey ? clearLayer(false) : view.clearDrawing()));
+  if (e.key === " ") return run(() => (view.spaceHeld = true));
+}
+
+function keyUp(e) {
+  if (e.key === " ") view.spaceHeld = false;
+  if (e.key.toLowerCase() === "i") view.pickHeld = false;
+}
+
+function cycleView(dir) {
+  const now = VIEW_MODES.findIndex((m) => m.focus === layout.focus && m.panelHidden === (layout.panelHidden && !layout.focus));
+  setLayout(VIEW_MODES[(Math.max(0, now) + dir + VIEW_MODES.length) % VIEW_MODES.length]);
+}
+
+function zoomView(k) {
+  const r = $("view").getBoundingClientRect();
+  view.zoomAt(r.width / 2, r.height / 2, view.z * k);
+}
+
+function stepScene(dir) {
+  const i = project.scenes.findIndex((s) => s.id === board.sceneId);
+  const scene = project.scenes[i + dir];
+  if (scene) selectBoard(sceneBoards(project, scene.id)[0], true);
+}
+
+function moveCurrent(dir) {
+  if (!nudgeBoard(project, board, dir)) return;
+  edited();
+  saveSoon();
+  refreshStrip();
+  updateLabel(project, board);
+  scrollToBoard($("strip"), board.id);
+}
+
+async function newBoardBefore() {
+  await flush();
+  const b = insertBoardBefore(project, board);
+  edited();
+  refreshStrip();
+  await selectBoard(b, true);
+}
+
+function toggleShot() {
+  toggleNewShot(project, board);
+  edited();
+  saveSoon();
+  refreshStrip();
+  fillPanel(project, board);
+}
+
+function toggleGuide(key) {
+  view.guides[key] = !view.guides[key];
+  saveGuides();
+  if (key === "onion") updateOnion();
+  view.drawGuides();
+}
+
+function pickPaletteColour(i) {
+  const def = TOOLS.find((t) => t.id === toolId);
+  if (!def || !def.colors[i]) return;
+  settings[toolId].color = def.colors[i];
+  saveToolSettings(settings);
+  setTool(toolId);
 }
 
 // ---------- menus ----------
@@ -639,8 +743,8 @@ async function openShotGen() {
   });
 }
 
-async function exportContactSheet() {
-  const o = await askOptions(project);
+async function exportContactSheet(preset = {}) {
+  const o = await askOptions(project, preset);
   if (!o) return;
   project.pdfOptions = o;
   metaDirty = true;

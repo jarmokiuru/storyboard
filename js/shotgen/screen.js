@@ -1,10 +1,12 @@
-// Shot Generator screen: opens full screen from a board, edits the set and the camera, saves the camera view
-// to the board's reference layer. Step 1 of phase 4: set + camera. Figures and furniture come next.
+// Shot Generator screen: opens full screen from a board, edits the set, furniture, figures and camera, and saves
+// the camera view to the board's reference layer. Poses and shot-size presets come in later steps.
 
 import { Stage } from "./stage.js";
 import { defaultRoom } from "./set.js";
 import { SENSORS, PRIMES, DEFAULT_SENSOR, sensorById } from "./sensors.js";
 import { formDialog } from "../ui.js";
+import { Things } from "./things.js";
+import { figuresFor, startPlacing, addMenu, select, selectedItem, moveSelected, deleteSelected, subjectDistance, refreshSelected } from "./placing.js";
 import { uid, sceneOf, BOARD_WIDTH, boardHeight, heading } from "../model.js";
 
 const $ = (id) => document.getElementById(id);
@@ -16,7 +18,7 @@ const SLIDERS = [
 ];
 
 let stage = null;
-let project, board, loc, shot, hooks;
+let project, board, loc, shot, hooks, figures;
 let drag = null;
 const touches = new Map();
 
@@ -54,12 +56,20 @@ export function openShotGenerator(p, b, h) {
   shot = { ...defaultShot(loc.room), ...(board.shot3d?.camera || {}) };
   if (!stage) {
     stage = new Stage($("sg-canvas"));
+    stage.things = new Things(stage.scene, () => { stage.request(); refreshSelected(); readout(); });
     bind();
   }
   $("shotgen").hidden = false;
   $("sg-title").textContent = `${loc.name} · Board ${h.label}`;
   buildControls();
   stage.setSet(loc.room);
+  figures = figuresFor(project, board);
+  startPlacing({
+    project, board, loc, figures, things: stage.things,
+    shot: () => shot,
+    setChanged: () => hooks.changed(),
+    redraw: () => { stage.request(); readout(); },
+  });
   apply();
   stage.resize();
   hooks.changed();
@@ -74,7 +84,7 @@ function save() {
   const w = BOARD_WIDTH;
   const h = boardHeight(project.ratio);
   const picture = stage.snapshot(w, h);
-  hooks.save(picture, { locationId: loc.id, camera: { ...shot } });
+  hooks.save(picture, { locationId: loc.id, camera: { ...shot }, figures: structuredClone(figures) });
   close();
 }
 
@@ -128,8 +138,15 @@ function refreshControls() {
 function apply() {
   stage.setShot(shot, sensor(), project.ratio);
   refreshControls();
+  readout();
+}
+
+function readout() {
+  if (!stage?.hfov) return;
   const s = sensor();
-  $("sg-readout").textContent = `${shot.focal} mm · ${stage.hfov.toFixed(1)}° horizontal · height ${Math.round(shot.height)} cm · tilt ${shot.tilt.toFixed(1)}° · ${s.camera} ${s.mode}`;
+  const d = subjectDistance();
+  const subject = d == null ? "" : ` · subject ${d.toFixed(2)} m`;
+  $("sg-readout").textContent = `${shot.focal} mm · ${stage.hfov.toFixed(1)}° horizontal · height ${Math.round(shot.height)} cm · tilt ${shot.tilt.toFixed(1)}°${subject} · ${s.camera} ${s.mode}`;
 }
 
 function setView(v) {
@@ -186,6 +203,7 @@ function bind() {
   $("sg-back").onclick = close;
   $("sg-save").onclick = save;
   $("sg-set").onclick = setDialog;
+  $("sg-add").onclick = (e) => addMenu(e.currentTarget);
   $("sg-reset").onclick = () => { shot = defaultShot(loc.room); apply(); };
   document.querySelectorAll("#sg-views [data-view]").forEach((b) => (b.onclick = () => setView(b.dataset.view)));
   $("sg-sensor").onchange = (e) => { project.sensor = e.target.value; apply(); hooks.changed(); };
@@ -238,17 +256,23 @@ function down(e) {
   }
   const rect = stage.mainRect;
   if (stage.view === "camera") {
-    drag = { mode: "look", id: e.pointerId, x: p.x, y: p.y, pan: shot.pan, tilt: shot.tilt, rect };
+    drag = { mode: "look", id: e.pointerId, x: p.x, y: p.y, pan: shot.pan, tilt: shot.tilt, rect, tap: true };
   } else if (stage.view === "top") {
     const g = stage.topToGround(p.x, p.y, rect);
     const near = 28 / stage.topScale(rect);   // about a fingertip, in metres
     const aim = { x: shot.x + Math.sin((shot.pan * Math.PI) / 180) * 1.2, z: shot.z - Math.cos((shot.pan * Math.PI) / 180) * 1.2 };
+    const item = stage.things.hitPlan(g.x, g.z, near * 0.4);
     if (Math.hypot(g.x - shot.x, g.z - shot.z) < near) drag = { mode: "move", id: e.pointerId, rect };
     else if (Math.hypot(g.x - aim.x, g.z - aim.z) < near * 1.5) drag = { mode: "aim", id: e.pointerId, rect };
-    else drag = { mode: "map", id: e.pointerId, x: p.x, y: p.y, cx: stage.top.cx, cz: stage.top.cz, rect };
+    else if (item) {
+      select(item);
+      const it = selectedItem();
+      drag = { mode: "item", id: e.pointerId, rect, dx: it.x - g.x, dz: it.z - g.z };
+    } else drag = { mode: "map", id: e.pointerId, x: p.x, y: p.y, cx: stage.top.cx, cz: stage.top.cz, rect, tap: true };
   } else {
-    drag = { mode: "orbit", id: e.pointerId, x: p.x, y: p.y, theta: stage.orbit.theta, phi: stage.orbit.phi };
+    drag = { mode: "orbit", id: e.pointerId, x: p.x, y: p.y, theta: stage.orbit.theta, phi: stage.orbit.phi, rect, tap: true };
   }
+  drag.start = p;
 }
 
 function move(e) {
@@ -256,11 +280,20 @@ function move(e) {
   if (e.pointerType === "touch" && touches.has(e.pointerId)) touches.set(e.pointerId, p);
   if (!drag) return;
   if (drag.mode === "pinch") {
+    // Once one finger has lifted, the other must not keep "pinching" against nothing.
+    if (touches.size < 2) return;
     const k = drag.d / Math.max(1, spread());
     zoom(k, drag);
     return;
   }
   if (drag.id !== e.pointerId) return;
+  if (drag.tap && Math.hypot(p.x - drag.start.x, p.y - drag.start.y) > 6) drag.tap = false;
+  if (drag.mode === "item") {
+    const g = stage.topToGround(p.x, p.y, drag.rect);
+    moveSelected(g.x + drag.dx, g.z + drag.dz);
+    return;
+  }
+  if (drag.mode === "look" && drag.tap) return;   // could still be a tap
   if (drag.mode === "look") {
     // Drag right = camera turns right; drag up = camera tilts up. Speed matches the lens's angle of view.
     shot.pan = wrap(drag.pan + ((p.x - drag.x) / drag.rect.w) * stage.hfov);
@@ -291,6 +324,7 @@ function up(e) {
   touches.delete(e.pointerId);
   if (!drag) return;
   if (drag.mode === "swap" && drag.id === e.pointerId) setView(stage.view === "camera" ? "top" : "camera");
+  if (drag.tap && drag.id === e.pointerId) tapSelect(local(e), drag);
   if (drag.mode === "pinch" ? touches.size === 0 : drag.id === e.pointerId) drag = null;
 }
 
@@ -307,6 +341,17 @@ function zoom(k, from = { span: stage.top.span, r: stage.orbit.r, focal: shot.fo
     stage.orbit.r = clamp(from.r * k, 1.5, 60);
     stage.request();
   }
+}
+
+// A tap without dragging picks what's under it (or clears the choice when it hits nothing).
+function tapSelect(p, d) {
+  if (stage.view === "top") {
+    const g = stage.topToGround(p.x, p.y, d.rect);
+    return select(stage.things.hitPlan(g.x, g.z, 0.1));
+  }
+  const r = d.rect;
+  const ndc = { x: ((p.x - r.x) / r.w) * 2 - 1, y: 1 - ((p.y - r.y) / r.h) * 2 };
+  select(stage.things.hitView(ndc, stage.view === "camera" ? stage.shotCam : stage.orbitCam));
 }
 
 function wheel(e) {
@@ -340,7 +385,13 @@ function keys(e) {
     held.add(key);
     return;
   }
-  const other = { z: () => (shot.roll = clamp(shot.roll - 1, -45, 45)), x: () => (shot.roll = clamp(shot.roll + 1, -45, 45)), escape: close };
+  const other = {
+    z: () => (shot.roll = clamp(shot.roll - 1, -45, 45)),
+    x: () => (shot.roll = clamp(shot.roll + 1, -45, 45)),
+    backspace: deleteSelected,
+    delete: deleteSelected,
+    escape: () => (selectedItem() ? select(null) : close()),
+  };
   if (!other[key]) return;
   e.preventDefault();
   other[key]();
@@ -377,4 +428,5 @@ function spread() {
 const clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, v));
 const wrap = (d) => ((((d + 180) % 360) + 360) % 360) - 180;
 const round = (v) => Math.round(v * 100) / 100;
+
 

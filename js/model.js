@@ -80,6 +80,37 @@ export function insertBoardAfter(p, ref, newShot) {
   return b;
 }
 
+// A board placed before ref, continuing ref's shot (it takes the shot's first letter; nothing is renumbered).
+export function insertBoardBefore(p, ref) {
+  const b = newBoard(ref.sceneId, ref.kuva, false);
+  Object.assign(b, { kuvakoko: ref.kuvakoko, sisalto: ref.sisalto ?? "", lens: ref.lens, movement: ref.movement });
+  p.boards.splice(p.boards.indexOf(ref), 0, b);
+  return b;
+}
+
+// Storyboarder's "/": a continuing board becomes the start of a new shot (next free Kuva #), or a shot's
+// start board joins the shot before it. Only this board's number changes.
+export function toggleNewShot(p, board) {
+  const boards = sceneBoards(p, board.sceneId);
+  const prev = boards[boards.indexOf(board) - 1];
+  if (board.newShot && prev) {
+    board.newShot = false;
+    board.kuva = prev.kuva;
+  } else if (!board.newShot) {
+    board.newShot = true;
+    board.kuva = String(nextKuva(p, board.sceneId));
+  }
+}
+
+// Swap with the neighbouring board in the same scene (-1 = left, +1 = right).
+export function nudgeBoard(p, board, dir) {
+  const boards = sceneBoards(p, board.sceneId);
+  const other = boards[boards.indexOf(board) + dir];
+  if (!other) return false;
+  moveBoard(p, board, other, dir > 0);
+  return true;
+}
+
 export function duplicateBoard(p, ref) {
   const b = { ...structuredClone(ref), id: uid(), newShot: false };
   p.boards.splice(p.boards.indexOf(ref) + 1, 0, b);

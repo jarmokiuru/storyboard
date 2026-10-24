@@ -397,3 +397,9 @@ dialog label span { color: var(--muted); }
   #sg-panel { max-height: 42vh; border-left: 0; border-top: 1px solid var(--line); padding-bottom: max(12px, env(safe-area-inset-bottom)); }
   #sg-lenses { grid-template-columns: repeat(7, 1fr); }
 }
+
+#sg-selected { display: grid; gap: 8px; padding: 10px; border-radius: var(--radius); background: var(--raised); }
+#sg-selected h3 { margin: 0; font-size: 12px; text-transform: uppercase; letter-spacing: 0.06em; color: #f0b429; }
+#sg-selected p { margin: 0; font-size: 13px; }
+.sg-dims { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
+.sg-sel-buttons { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }

@@ -133,13 +133,23 @@ export class BoardView {
   }
 
   undo() {
-    const name = this.history.undo(this.ctx);
-    if (name) this.hooks.onChange(name);
+    for (const name of this.history.undo(this.ctx)) this.hooks.onChange(name);
   }
 
   redo() {
-    const name = this.history.redo(this.ctx);
-    if (name) this.hooks.onChange(name);
+    for (const name of this.history.redo(this.ctx)) this.hooks.onChange(name);
+  }
+
+  // Clear every drawing layer (not the reference picture) as one undo step.
+  clearDrawing() {
+    const group = Symbol("clear");
+    for (const name of LAYERS) {
+      if (name === "reference") continue;
+      this.history.begin(this.layers[name], name);
+      this.ctx[name].clearRect(0, 0, this.w, this.h);
+      this.history.commit([0, 0, this.w, this.h], group);
+      this.hooks.onChange(name, { cleared: true });
+    }
   }
 
   // ---------- view: fit, pan, zoom ----------
@@ -232,7 +242,8 @@ export class BoardView {
     try { this.view.setPointerCapture(e.pointerId); } catch { /* still works without */ }
     if (e.pointerType === "mouse" && (e.button === 1 || this.spaceHeld)) return this.startPan(e);
     if (e.pointerType === "mouse" && e.button !== 0) return;
-    if (e.altKey && !e.metaKey) return this.pick(e);
+    if (this.pickHeld) return this.pick(e);
+    if (e.altKey && !e.metaKey && this.quickEraser) return this.startStroke(e, this.quickEraser);
     if (e.metaKey) return this.startMove(e, e.altKey);
     if (this.tool.def.id === "move") return this.startMove(e, this.moveMode === "scale");
     this.startStroke(e);
@@ -315,9 +326,10 @@ export class BoardView {
 
   // ---------- strokes ----------
 
-  startStroke(e) {
+  // tool: normally the chosen tool; Alt-drag passes the eraser for a quick erase on the active layer.
+  startStroke(e, tool = this.tool) {
     this.cursor.hidden = true;
-    const { def, size, color } = this.tool;
+    const { def, size, color } = tool;
     const eraser = def.id === "eraser";
     const name = eraser ? this.activeLayer : def.layer;
     if (!eraser && name !== this.activeLayer) this.setActive(name);
