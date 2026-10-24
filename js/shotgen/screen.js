@@ -117,9 +117,9 @@ function buildControls() {
   const sliders = $("sg-sliders");
   sliders.innerHTML = "";
   for (const [key, label, min, max, stepSize, unit] of SLIDERS) {
-    const row = document.createElement("label");
+    const row = document.createElement("div");
     row.className = "sg-slider";
-    row.innerHTML = `<span>${label}</span><input type="range" min="${min}" max="${max}" step="${stepSize}" data-key="${key}"><output data-for="${key}"></output>`;
+    row.innerHTML = `<span>${label}</span><input type="range" min="${min}" max="${max}" step="${stepSize}" data-key="${key}" aria-label="${label}"><output data-for="${key}"></output><button class="sg-zero" data-reset="${key}" title="Back to ${key === "height" ? "150 cm" : "0°"}">↺</button>`;
     row.dataset.unit = unit;
     sliders.append(row);
   }
@@ -206,6 +206,18 @@ function bind() {
   $("sg-set").onclick = setDialog;
   $("sg-add").onclick = (e) => addMenu(e.currentTarget);
   $("sg-reset").onclick = () => { shot = defaultShot(loc.room); apply(); };
+  // ↺ next to a slider: just that value back to its start (height 150 cm, angles 0°).
+  $("sg-sliders").addEventListener("click", (e) => {
+    const key = e.target.dataset?.reset;
+    if (!key) return;
+    shot[key] = defaultShot(loc.room)[key];
+    apply();
+  });
+  $("sg-focus").onclick = () => {
+    $("shotgen").classList.toggle("focus");
+    $("sg-focus").classList.toggle("on", $("shotgen").classList.contains("focus"));
+    stage.resize();
+  };
   document.querySelectorAll("#sg-views [data-view]").forEach((b) => (b.onclick = () => setView(b.dataset.view)));
   $("sg-sensor").onchange = (e) => { project.sensor = e.target.value; apply(); hooks.changed(); };
   $("sg-lenses").onclick = (e) => {

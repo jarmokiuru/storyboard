@@ -153,11 +153,13 @@ export function subjectDistance() {
 
 // A number with its own slider: drag the slider, type in the box, use ↑/↓ in the box (Shift = ×10),
 // or scroll over either.
-function numberRow(label, key, min, max, step, unit) {
-  return `<div class="sg-num" data-key="${key}" data-min="${min}" data-max="${max}" data-step="${step}">
+// reset: the value ↺ goes back to.
+function numberRow(label, key, min, max, step, unit, reset) {
+  return `<div class="sg-num" data-key="${key}" data-min="${min}" data-max="${max}" data-step="${step}" data-reset="${reset}">
     <span>${label}</span>
     <input type="range" min="${min}" max="${max}" step="${step}" aria-label="${label}">
     <input class="num" inputmode="decimal" autocomplete="off" aria-label="${label} (${unit})"><em>${unit}</em>
+    <button class="sg-zero" title="Back to ${reset} ${unit}">↺</button>
   </div>`;
 }
 
@@ -167,16 +169,19 @@ function showSelected() {
   box.hidden = !it;
   if (!it) return;
   const isFig = it.kind === "figure";
+  const own = ctx.things.sizeOf(it.id);   // the model's own size, for ↺
+  const ownCm = (v, fallback) => (own ? Math.round(v * 100) : fallback);
   box.innerHTML = `
     <h3>${isFig ? "Figure" : "Selected"}</h3>
     ${isFig
-      ? `<label><span>Name</span><input data-f="name" autocomplete="off"></label>${numberRow("Height", "height", 30, 230, 1, "cm")}`
+      ? `<label><span>Name</span><input data-f="name" autocomplete="off"></label>${numberRow("Height", "height", 30, 230, 1, "cm", byId(it.model).height)}`
       : `<p class="muted sg-what"></p>
-         ${numberRow("Width", "w", 5, 800, 1, "cm")}
-         ${numberRow("Depth", "d", 5, 800, 1, "cm")}
-         ${numberRow("Height", "h", 5, 400, 1, "cm")}
+         ${numberRow("Width", "w", 5, 800, 1, "cm", ownCm(own?.x, it.w))}
+         ${numberRow("Depth", "d", 5, 800, 1, "cm", ownCm(own?.z, it.d))}
+         ${numberRow("Height", "h", 5, 400, 1, "cm", ownCm(own?.y, it.h))}
          <p class="muted sg-unit">Shared by every scene in this set</p>`}
-    ${numberRow("Turn", "rot", -180, 180, 5, "°")}
+    ${numberRow("Elevation", "y", -100, 300, 1, "cm", 0)}
+    ${numberRow("Turn", "rot", -180, 180, 5, "°", 0)}
     <div class="sg-sel-buttons"><button data-act="delete" class="danger">Delete</button><button data-act="done">Done</button></div>`;
   if (!isFig) box.querySelector(".sg-what").textContent = byId(it.model)?.label || it.model;
   const name = box.querySelector("[data-f=name]");
@@ -219,6 +224,7 @@ function showSelected() {
       }
       if (e.key === "Enter") text.blur();
     };
+    row.querySelector(".sg-zero").onclick = () => { setValue(row, Number(row.dataset.reset)); text.value = it[row.dataset.key]; };
     row.addEventListener("wheel", (e) => {
       e.preventDefault();
       stepBy(row, e.deltaY < 0 ? 1 : -1, e.shiftKey);

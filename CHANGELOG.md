@@ -1,5 +1,12 @@
 # Changelog
 
+## 2026-10-25 — Storyboard v0.5.2
+- ↺ next to every camera slider (height back to 150 cm, pan/tilt/roll to 0°) and every value of a chosen piece or figure (size back to the model's own, elevation and turn to 0).
+- Elevation for furniture and figures, in cm above the floor (0 = on the floor; −100 to +300).
+- Dragging a slider no longer scrolls the side panel; panels don't bounce at their ends.
+- Focus button in the Shot Generator hides its panel for a bigger view, like Focus in the board editor.
+- Buttons are easier to tell apart: grouped with thin dividers, each with a faint edge, a hover and a press effect; Camera/Top/Orbit and other either-or choices read as one joined switch.
+
 ## 2026-10-25 — Storyboard v0.5.1
 - Camera view: dragging now moves the picture with your finger — drag right and the camera pans left, drag up and it tilts down.
 - Typing a size no longer deletes the piece: the panel used to redraw after every digit, so the next Backspace landed on "delete". It now stays put while you type.

@@ -1,7 +1,8 @@
 // Placed furniture and figures: keeps the 3D copies in step with the saved data, and finds what was tapped.
 // Item data (plan metres, degrees, cm):
-//   object: { id, kind: "object", model, x, z, rot, w, d, h }
-//   figure: { id, kind: "figure", model, name, x, z, rot, height, colour }
+//   object: { id, kind: "object", model, x, z, y, rot, w, d, h }
+//   figure: { id, kind: "figure", model, name, x, z, y, rot, height, colour }
+// y: elevation in cm above the floor (missing = 0).
 // rot 0 = facing south (towards the bottom of the plan), + turns clockwise seen from above.
 
 import * as THREE from "three";
@@ -65,6 +66,11 @@ export class Things {
     this.onChange();
   }
 
+  // The model's own size in metres (null until loaded).
+  sizeOf(id) {
+    return this.nodes.get(id)?.size ?? null;
+  }
+
   remove(id) {
     const n = this.nodes.get(id);
     if (!n) return;
@@ -76,7 +82,7 @@ export class Things {
 
   place(n) {
     const { item, holder } = n;
-    holder.position.set(item.x, 0, item.z);
+    holder.position.set(item.x, (item.y || 0) / 100, item.z);   // y: elevation in cm, 0 = on the floor
     holder.rotation.y = -rad(item.rot);
     if (!n.size) return;
     if (item.kind === "figure") {

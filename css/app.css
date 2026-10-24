@@ -36,7 +36,7 @@ button, select, input, textarea { font: inherit; color: inherit; }
 button {
   min-height: 40px;
   padding: 0 12px;
-  border: 0;
+  border: 1px solid rgba(255, 255, 255, 0.07);
   border-radius: var(--radius);
   background: var(--raised);
   cursor: pointer;
@@ -387,7 +387,8 @@ dialog label span { color: var(--muted); }
 #sg-lenses button { padding: 0; min-height: 36px; font-size: 13px; }
 .sg-free { grid-template-columns: auto 1fr !important; align-items: center; }
 #sg-sliders { display: grid; gap: 10px; }
-.sg-slider { grid-template-columns: 56px 1fr 64px !important; align-items: center; }
+.sg-slider { display: grid; grid-template-columns: 52px 1fr 58px 30px; gap: 6px; align-items: center; font-size: 13px; }
+.sg-slider span { color: var(--muted); }
 .sg-slider input { padding: 0; border: 0; background: transparent; min-height: 30px; }
 .sg-slider output { text-align: right; font-variant-numeric: tabular-nums; }
 .sg-hint { font-size: 12px; margin: 0; }
@@ -402,8 +403,36 @@ dialog label span { color: var(--muted); }
 #sg-selected h3 { margin: 0; font-size: 12px; text-transform: uppercase; letter-spacing: 0.06em; color: #f0b429; }
 #sg-selected p { margin: 0; font-size: 13px; }
 .sg-sel-buttons { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
-.sg-num { display: grid; grid-template-columns: 52px 1fr 58px 18px; gap: 6px; align-items: center; font-size: 13px; }
+.sg-num { display: grid; grid-template-columns: 62px 1fr 56px 16px 30px; gap: 6px; align-items: center; font-size: 13px; }
 .sg-num span { color: var(--muted); }
 .sg-num input[type=range] { padding: 0; border: 0; background: transparent; min-height: 30px; }
 .sg-num .num { min-height: 32px; padding: 4px 6px; text-align: right; font-variant-numeric: tabular-nums; }
 .sg-num em { font-style: normal; color: var(--muted); }
+.sg-zero { min-height: 30px; padding: 0; font-size: 15px; background: transparent; color: var(--muted); }
+.sg-zero:active { color: var(--text); }
+/* Dragging a slider must not scroll the panel it sits in. */
+input[type=range] { touch-action: none; }
+#panel, #sg-panel, .projects-body { overscroll-behavior: contain; }
+#shotgen.focus { grid-template-columns: minmax(0, 1fr); grid-template-areas: "bar" "stage"; }
+#shotgen.focus #sg-panel { display: none; }
+
+/* ---------- telling buttons apart ---------- */
+
+button:hover:not(:disabled) { background: var(--raised-hi); }
+button.on:hover, button.primary:hover { background: #ffffff; }
+button:active:not(:disabled) { transform: translateY(1px); }
+.bar { gap: 6px; }
+.sep { flex: none; width: 1px; align-self: stretch; margin: 8px 4px; background: rgba(255, 255, 255, 0.14); }
+
+/* Camera / Top / Orbit and similar choices read as one joined control. */
+#sg-views, .seg, .move-modes { gap: 0 !important; padding: 2px; border-radius: 10px; background: rgba(0, 0, 0, 0.28); }
+#sg-views button, .seg button, .move-modes button { border-color: transparent; border-radius: 8px; background: transparent; }
+#sg-views button.on, .seg button.on, .move-modes button.on { background: var(--accent); color: var(--accent-text); }
+
+/* Tool column: drawing tools, then a gap before the straight-line and move controls, sizes and colours. */
+.tool-grid { gap: 5px; }
+#tools > * + * { margin-top: 4px; }
+#tools .sizes, #tools .colors { padding-top: 8px; border-top: 1px solid var(--line); }
+
+#panel .buttons { gap: 6px; }
+#top-bar .title { flex: 0 1 auto; min-width: 6ch; }
