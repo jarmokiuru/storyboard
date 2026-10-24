@@ -723,40 +723,38 @@ async function openShotGen() {
   } catch (err) {
     return toast("Couldn't open the Shot Generator: " + err.message, 5000);
   }
-  const b = board;
-  mod.openShotGenerator(project, b, {
-    label: boardLabel(project, b),
+  let target = board;   // the board the Shot Generator saves to; moves on with "Save as new board"
+  const keep = (b, picture, shot3d) => {
+    b.shot3d = shot3d;
+    // Height and tilt also go to the shot data sheet.
+    b.camera = { height: shot3d.camera.height, tilt: shot3d.camera.tilt, pan: shot3d.camera.pan, focal: shot3d.camera.focal };
+    if (board === b) {
+      view.drawReference(picture, "fill");
+      renderLayers(b, view.activeLayer);
+    }
+    edited();
+    saveSoon(200);
+  };
+  mod.openShotGenerator(project, target, {
+    label: boardLabel(project, target),
     changed: () => { metaDirty = true; saveSoon(); },
-    close: () => { if (board === b) view.fit(); },
+    close: () => { if (board === target) view.fit(); },
     save: (picture, shot3d) => {
-      b.shot3d = shot3d;
-      // Height and tilt also go to the shot data sheet.
-      b.camera = { height: shot3d.camera.height, tilt: shot3d.camera.tilt, pan: shot3d.camera.pan, focal: shot3d.camera.focal };
-      if (board === b) {
-        view.drawReference(picture, "fill");
-        renderLayers(b, view.activeLayer);
-      }
-      edited();
-      saveSoon(200);
+      keep(target, picture, shot3d);
       toast("Saved to the board's reference layer. Draw over it, or dim it in Layers.");
     },
+    // A new board after the current one, as the next shot (next Kuva #), with this camera view on it.
+    saveAsNew: async (picture, shot3d) => {
+      await flush();
+      const b = insertBoardAfter(project, target, true);
+      target = b;
+      edited();
+      refreshStrip();
+      await selectBoard(b, true);
+      keep(b, picture, shot3d);
+      return { board: b, label: boardLabel(project, b) };
+    },
   });
-}
-
-async function exportContactSheet(preset = {}) {
-  const o = await askOptions(project, preset);
-  if (!o) return;
-  project.pdfOptions = o;
-  metaDirty = true;
-  await flush();
-  toast("Making PDF…");
-  try {
-    const blob = await makeContactSheet(project, o);
-    const name = `${safeName(project.title)} ${o.kind === "blank" ? "worksheet" : "storyboard"}.pdf`;
-    await shareFile(blob, name, "application/pdf");
-  } catch (err) {
-    toast("Couldn't make the PDF: " + err.message);
-  }
 }
 
 async function exportShotSheet(kind) {

@@ -4,7 +4,7 @@
 import { Stage } from "./stage.js";
 import { defaultRoom } from "./set.js";
 import { SENSORS, PRIMES, DEFAULT_SENSOR, sensorById } from "./sensors.js";
-import { formDialog } from "../ui.js";
+import { formDialog, toast } from "../ui.js";
 import { Things } from "./things.js";
 import { figuresFor, startPlacing, addMenu, select, selectedItem, moveSelected, deleteSelected, subjectDistance, refreshSelected } from "./placing.js";
 import { uid, sceneOf, BOARD_WIDTH, boardHeight, heading } from "../model.js";
@@ -81,12 +81,21 @@ function close() {
   hooks.close();
 }
 
+const picture = () => stage.snapshot(BOARD_WIDTH, boardHeight(project.ratio));
+const shot3d = () => ({ locationId: loc.id, camera: { ...shot }, figures: structuredClone(figures) });
+
 function save() {
-  const w = BOARD_WIDTH;
-  const h = boardHeight(project.ratio);
-  const picture = stage.snapshot(w, h);
-  hooks.save(picture, { locationId: loc.id, camera: { ...shot }, figures: structuredClone(figures) });
+  hooks.save(picture(), shot3d());
   close();
+}
+
+// Storyboarder's "insert as new shot": keep working here, now on the new board.
+async function saveAsNew() {
+  const made = await hooks.saveAsNew(picture(), shot3d());
+  board = made.board;
+  hooks.label = made.label;
+  $("sg-title").textContent = `${loc.name} · Board ${made.label}`;
+  toast(`Saved as new board ${made.label}. Keep framing, or go back to the board.`);
 }
 
 // ---------- controls ----------
@@ -203,6 +212,7 @@ async function setDialog() {
 function bind() {
   $("sg-back").onclick = close;
   $("sg-save").onclick = save;
+  $("sg-save-new").onclick = saveAsNew;
   $("sg-set").onclick = setDialog;
   $("sg-add").onclick = (e) => addMenu(e.currentTarget);
   $("sg-reset").onclick = () => { shot = defaultShot(loc.room); apply(); };

@@ -1,5 +1,8 @@
 # Changelog
 
+## 2026-10-25 — Storyboard v0.5.3
+- Shot Generator: **Save as new board** puts the camera view on a new board right after the current one, as the next shot (next Kuva #), and keeps you in the Shot Generator on that new board — frame the next angle and save again. Like Storyboarder's "insert as new shot".
+
 ## 2026-10-25 — Storyboard v0.5.2
 - ↺ next to every camera slider (height back to 150 cm, pan/tilt/roll to 0°) and every value of a chosen piece or figure (size back to the model's own, elevation and turn to 0).
 - Elevation for furniture and figures, in cm above the floor (0 = on the floor; −100 to +300).
