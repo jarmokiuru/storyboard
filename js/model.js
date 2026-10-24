@@ -26,6 +26,17 @@ function newLayers() {
   return Object.fromEntries(LAYERS.map((n) => [n, { visible: true, opacity: 1, hasData: false }]));
 }
 
+// Kitchen from SPEC §10: long walls run east–west so the window, centred in the long wall, faces south.
+export function defaultRoom(exterior = false) {
+  return {
+    exterior,
+    w: 5.0, d: 4.0, h: 2.6,
+    door: { wall: "e", offset: 0, width: 0.9, height: 2.1 },
+    window: { wall: "s", offset: 0, width: 1.4, height: 1.2, sill: 0.9 },
+    north: 0,
+  };
+}
+
 export function newScene(fields = {}) {
   return { id: uid(), kohtaus: "", intExt: "INT", lokaatio: "", aika: "", synopsis: "", henkilot: "", actBefore: "", collapsed: false, ...fields };
 }

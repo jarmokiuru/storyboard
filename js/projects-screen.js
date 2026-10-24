@@ -4,6 +4,7 @@ import * as db from "./db.js";
 import { newProject, RATIOS, ratioLabel, ago } from "./model.js";
 import { formDialog, confirmBox, choose, toast, pickFile } from "./ui.js";
 import { readProjectFile, installProject } from "./projectfile.js";
+import { mergeStarter } from "./importer.js";
 import { standalone, storageKept } from "./offline.js";
 import { VERSION } from "./version.js";
 
@@ -79,17 +80,26 @@ async function importDialog() {
   let data;
   try {
     data = await readProjectFile(file);
-  } catch {
-    return toast("That isn't a Storyboard project file.");
+  } catch (err) {
+    return toast(err.newer ? err.message : "That isn't a Storyboard project file.", 6000);
   }
   const existing = await db.getProject(data.project.id);
   let mode = "replace";
   if (existing) {
-    mode = await choose(`"${existing.title}" is already on this device. Replace it with the file, or keep both?`, [
+    mode = await choose(`"${existing.title}" is already on this device. Merge the file into it (new scenes and shots added, changes listed, drawings kept), keep both, or replace it?`, [
       { label: "Keep both", value: "copy" },
       { label: "Replace", value: "replace", danger: true },
+      { label: "Merge", value: "merge" },
     ]);
     if (!mode) return;
+  }
+  if (mode === "merge") {
+    if (await mergeStarter(existing, data.project)) {
+      existing.modified = Date.now();
+      await db.putProject(existing);
+      toast(`Merged into "${existing.title}"`);
+    }
+    return showProjects();
   }
   const p = await installProject(data, mode);
   toast(`Imported "${p.title}"`);

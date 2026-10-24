@@ -76,7 +76,8 @@ function faceCamera(x, z) {
 
 export function addMenu(anchor) {
   const scene = sceneOf(ctx.project, ctx.board);
-  const cast = (scene.henkilot || "").split(/[,;\n]/).map((n) => n.trim()).filter(Boolean).filter((n) => !ctx.figures.some((f) => f.name === n));
+  const named = (scene.henkilot || "").split(/[,;\n]/).map((n) => n.trim()).filter(Boolean);
+  const cast = [...new Set([...named, ...(ctx.project.characters || []).map((c) => c.name)])].filter((n) => !ctx.figures.some((f) => f.name === n));
   const items = [{ type: "note", label: "Figures" }];
   for (const name of cast) items.push({ label: `Figure ${name}`, action: () => figureDialog(name) });
   items.push({ label: "Figure…", action: () => figureDialog("") });
@@ -92,10 +93,12 @@ export function addMenu(anchor) {
 }
 
 async function figureDialog(name) {
+  // The project's character list (from a starter file) gives body and height, e.g. A: adult male, 182 cm.
+  const known = (ctx.project.characters || []).find((c) => c.name === name);
   const v = await formDialog("Add figure", [
     { name: "name", label: "Name (from Henkilöt)", value: name },
-    { name: "model", label: "Body", type: "select", value: "adult-male", options: FIGURES.map((f) => [f.id, f.label]) },
-    { name: "height", label: "Height (cm) — leave empty for the body's own height", value: "" },
+    { name: "model", label: "Body", type: "select", value: known?.model || "adult-male", options: FIGURES.map((f) => [f.id, f.label]) },
+    { name: "height", label: "Height (cm) — leave empty for the body's own height", value: known?.height ?? "" },
   ], { ok: "Add" });
   if (!v) return;
   const entry = byId(v.model);

@@ -15,6 +15,7 @@ import { exportProject } from "./projectfile.js";
 import { askOptions, makeContactSheet } from "./contact-sheet.js";
 import { lensMatches, lensText } from "./lens.js";
 import { importSpreadsheet, importScript } from "./importer.js";
+import { renumber } from "./renumber.js";
 import { logText, clearLog } from "./pencil-log.js";
 import { shotSheetXlsx, shotSheetCsv, boardImagesZip, imageName } from "./shot-sheet.js";
 import { VERSION } from "./version.js";
@@ -669,8 +670,12 @@ function importMenu(anchor) {
       const v = await formDialog("Paste script text", [{ name: "text", label: "Script", type: "textarea", rows: 12, value: "" }], { ok: "Find scenes" });
       if (v) afterImport(await importScript(project, v.text));
     } },
+    { label: "Renumber list (.csv)…", action: async () => {
+      const file = await pickFile();
+      if (file) afterImport(await renumber(project, await file.text()));
+    } },
     { type: "sep" },
-    { type: "note", label: "Imports add and fill in; drawings are never changed." },
+    { type: "note", label: "Imports add and fill in; drawings are never changed. A renumber list moves boards with their drawings." },
   ]);
 }
 

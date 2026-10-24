@@ -124,7 +124,8 @@ function buildControls() {
 
   const lenses = $("sg-lenses");
   lenses.innerHTML = "";
-  for (const f of PRIMES) {
+  // The project's own lens set (e.g. from a starter file), otherwise Jarmo's primes.
+  for (const f of project.lenses?.length ? project.lenses : PRIMES) {
     const b = document.createElement("button");
     b.textContent = f;
     b.dataset.focal = f;

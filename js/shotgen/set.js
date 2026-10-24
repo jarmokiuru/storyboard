@@ -6,16 +6,8 @@ import * as THREE from "three";
 export const LAYER_CAMERA_ONLY = 1;   // seen only through the shot camera (the ceiling)
 export const LAYER_PLAN = 2;          // seen only in top and orbit views (wall outlines, camera body)
 
-// Kitchen from SPEC §10: long walls run east–west so the window, centred in the long wall, faces south.
-export function defaultRoom(exterior = false) {
-  return {
-    exterior,
-    w: 5.0, d: 4.0, h: 2.6,
-    door: { wall: "e", offset: 0, width: 0.9, height: 2.1 },
-    window: { wall: "s", offset: 0, width: 1.4, height: 1.2, sill: 0.9 },
-    north: 0,
-  };
-}
+// The default room lives in model.js (project files need it without the 3D library).
+export { defaultRoom } from "../model.js";
 
 // Clay colours (sRGB hex). Floor darker than walls so the horizon and room shape read at a glance.
 const CLAY = { floor: "#86898e", ground: "#8f9296", wall: "#d2d3d5", ceiling: "#e4e4e5", edge: "#55585d", grid: "#6c7075" };

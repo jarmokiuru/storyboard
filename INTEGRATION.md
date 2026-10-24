@@ -25,9 +25,13 @@ Verified in the code on 2026-10-25 (v0.5.2): `board.lens` (text from the shot li
 - Re-importing a shot list whose Lens/Focal differs from the board: use the existing change list (ticked by default). Accepting it changes only `board.lens`; the 3D camera keeps its focal length until the Shot Generator is opened and saved again.
 
 ### 2. Write down the project file format
+**Done in v0.6.0 (2026-10-25)** — `docs/project-format.md`. `format` stays 1 (only optional fields were added: `characters`, `lenses`).
+
 Add `docs/project-format.md` describing `project.json` inside the `.storyboard` zip: every field, its unit, the plan axes (x west→east, z north→south, y up, metres; pan 0 = north; rot 0 = facing south), and the layer and thumbnail paths. Give it a `format` number (currently 1). Raise the number on any change that breaks reading, and note it in the changelog. Claude on the chat side reads and writes this file, so the document must stay current.
 
 ### 3. Accept a starter project written by Claude
+**Done in v0.6.0 (2026-10-25)** — starter files may leave out ids, layers and thumbnails, and link boards to scenes by `kohtaus` (`normalizeProject` in `js/projectfile.js`). A newer `format` is refused with the reload message. Same project on the device → *Merge* / *Keep both* / *Replace*; merge is `mergeStarter` in `js/importer.js`. It never changes the aspect ratio (listed as not merged), and drawings in the file aren't brought in. The Add menu takes body and height from `characters`; the lens buttons come from `lenses`. Test file: `samples/starter.storyboard` (built by `samples/make_starter.py`).
+
 Claude will write a `.storyboard` file with no drawings, holding:
 - scenes (with act breaks), boards with `Kuva #`, Kuvakoko, Sisältö, Lens/Focal, Movement, Notes
 - `project` aspect ratio, camera format (`project.sensor`) and lens set — from the project's *Kuvauksen metodit* note / Tech Specs
@@ -42,6 +46,8 @@ App side:
 - Characters: if the project lists heights (e.g. A 182 cm), the Add menu uses them.
 
 ### 4. Renumbered shots
+**Done in v0.6.0 (2026-10-25)** — Import → *Renumber list (.csv)…* (`js/renumber.js`). Commas, semicolons or tabs; a header row is optional. Moves are listed to confirm; all happen at once; a move onto a number that stays put is skipped and listed. A shot moves with all its boards (continuations too); touched scenes are re-sorted by Kuva #. Test file: `samples/renumber.csv`.
+
 Shots are matched by `Kohtaus #` + `Kuva #` (verified in `importer.js`). A renumbered shot would arrive as a new empty board, and its drawing would stay on the old number (inferred from the merge rules). Import → *Renumber list…* takes a small CSV from `screenplay-revision-diff`:
 ```
 old Kohtaus #,old Kuva #,new Kohtaus #,new Kuva #

@@ -4,7 +4,7 @@
 
 import { readFirstSheet } from "./xlsx.js";
 import { parseScript } from "./script.js";
-import { newScene, newBoard, sceneBoards } from "./model.js";
+import { newScene, newBoard, sceneBoards, uid } from "./model.js";
 import { formDialog, toast } from "./ui.js";
 
 const COLUMNS = {
@@ -20,7 +20,7 @@ const COLUMNS = {
 const REQUIRED = { breakdown: ["kohtaus"], shotlist: ["kohtaus", "kuva"] };
 
 const SCENE_FIELDS = { intExt: "INT/EXT", lokaatio: "Lokaatio", aika: "Vuorokaudenaika", synopsis: "Synopsis", henkilot: "Henkilöt", actBefore: "Act divider" };
-const SHOT_FIELDS = { kuvakoko: "Kuvakoko", sisalto: "Sisältö", lens: "Lens/Focal", movement: "Movement", notes: "Notes" };
+const SHOT_FIELDS = { kuvakoko: "Kuvakoko", sisalto: "Sisältö", lens: "Lens/Focal", movement: "Movement", notes: "Notes", dialogue: "Dialogue", action: "Action" };
 
 const norm = (s) => String(s ?? "").toLowerCase().replace(/\s+/g, "");
 const sameNumber = (a, b) => norm(a) === norm(b);
@@ -288,3 +288,100 @@ export async function importScript(project, text) {
   return !!(await review(project, planScenes(project, scenes), "script"));
 }
 
+
+// ---------- merging a starter project file (INTEGRATION.md item 3) ----------
+
+const roomText = (r) => r.exterior ? "exterior" : `${r.w} × ${r.d} m, ceiling ${r.h} m`;
+const sameRoom = (a, b) => JSON.stringify({ ...a, north: a.north ?? 0 }) === JSON.stringify({ ...b, north: b.north ?? 0 });
+
+// Merge a starter file into a project already on this device, by the shot-list rules: scenes by Kohtaus #, boards
+// by Kohtaus # + Kuva #, new ones added, empty fields filled, changed text listed to accept or keep. Camera format,
+// lens set, characters and location rooms are listed the same way. Drawings, 3D cameras, figures and furniture on
+// this device are never touched. incoming: a normalised project (projectfile.js). Returns true when something changed.
+export async function mergeStarter(project, incoming) {
+  const sceneOfIn = (b) => incoming.scenes.find((s) => s.id === b.sceneId);
+  const scenes = incoming.scenes.map((s) => pick(s, ["kohtaus", ...Object.keys(SCENE_FIELDS)]));
+  const shots = incoming.boards.map((b) => ({ kohtaus: sceneOfIn(b).kohtaus, kuva: b.kuva, ...pick(b, Object.keys(SHOT_FIELDS)) }));
+  // Only the first board of each shot is matched; continuation boards in the file are skipped quietly.
+  const seen = new Set();
+  const firstShots = shots.filter((s) => {
+    const key = norm(s.kohtaus) + "/" + norm(s.kuva);
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+
+  const scenePlan = planScenes(project, scenes);
+  const added = new Set(scenePlan.newScenes.map((s) => norm(s.kohtaus)));
+  const shotPlan = planShots(project, firstShots.filter((s) => !added.has(norm(s.kohtaus))));
+  const boardsInNewScenes = firstShots.filter((s) => added.has(norm(s.kohtaus))).length;
+
+  // Project-wide settings: filled when missing here, listed when different.
+  const extra = { fills: [], changes: [], problems: [] };
+  const setting = (key, label, show = (v) => v) => {
+    const v = incoming[key];
+    if (v === undefined || (Array.isArray(v) && !v.length)) return;
+    if (project[key] === undefined) extra.fills.push(() => (project[key] = structuredClone(v)));
+    else if (JSON.stringify(project[key]) !== JSON.stringify(v)) {
+      extra.changes.push({ text: `${label}: ${show(project[key])} → ${show(v)}`, apply: () => (project[key] = structuredClone(v)) });
+    }
+  };
+  setting("sensor", "Camera format");
+  setting("lenses", "Lens set", (v) => v.join(", ") + " mm");
+  if (Math.abs((incoming.ratio || 0) - project.ratio) > 0.005) {
+    extra.problems.push(`Aspect ratio in the file is ${incoming.ratio}:1; this project stays ${project.ratio}:1 (drawings would no longer fit).`);
+  }
+  project.characters = project.characters || [];
+  for (const c of incoming.characters || []) {
+    const mine = project.characters.find((x) => x.name === c.name);
+    if (!mine) extra.fills.push(() => project.characters.push({ ...c }));
+    else if (mine.model !== c.model || mine.height !== c.height) {
+      extra.changes.push({ text: `Character ${c.name}: ${mine.model} ${mine.height ?? "?"} cm → ${c.model} ${c.height ?? "?"} cm`, apply: () => Object.assign(mine, c) });
+    }
+  }
+  project.locations = project.locations || [];
+  for (const l of incoming.locations || []) {
+    const mine = project.locations.find((x) => x.name.toLowerCase() === l.name.toLowerCase());
+    if (!mine) {
+      extra.fills.push(() => project.locations.push({ ...structuredClone(l), id: l.id && !project.locations.some((x) => x.id === l.id) ? l.id : uid() }));
+      continue;
+    }
+    if (!sameRoom(mine.room, l.room)) {
+      extra.changes.push({ text: `Set ${l.name}: ${roomText(mine.room)} → ${roomText(l.room)} (furniture stays)`, apply: () => (mine.room = structuredClone(l.room)) });
+    }
+    if (l.tag && mine.tag !== l.tag) extra.changes.push({ text: `Set ${l.name}: plan ${mine.tag} → ${l.tag}`, apply: () => (mine.tag = l.tag) });
+  }
+
+  const changes = [
+    ...scenePlan.changes.map((c) => ({ key: "s" + c.id, text: c.text })),
+    ...shotPlan.changes.map((c) => ({ key: "b" + c.id, text: c.text })),
+    ...extra.changes.map((c, i) => ({ key: "x" + i, text: c.text })),
+  ];
+  const fills = scenePlan.fills.length + shotPlan.fills.length + extra.fills.length;
+  const boards = shotPlan.newBoards.length + shotPlan.reuse.length + boardsInNewScenes;
+  const adds = [];
+  if (scenePlan.newScenes.length) adds.push(`${scenePlan.newScenes.length} new ${scenePlan.newScenes.length === 1 ? "scene" : "scenes"}`);
+  if (boards) adds.push(`${boards} new ${boards === 1 ? "board" : "boards"}`);
+  if (fills) adds.push(`${fills} empty ${fills === 1 ? "item" : "items"} filled`);
+  const problems = [...scenePlan.problems, ...shotPlan.problems, ...extra.problems];
+  if (!adds.length && !changes.length) {
+    toast(problems[0] || "Nothing new in this file.", 5000);
+    return false;
+  }
+
+  const fields = [{ type: "note", label: (adds.length ? "Adds " + adds.join(", ") + "." : "Nothing new to add.") + " Drawings, 3D cameras, figures and furniture on this device stay as they are; drawings in the file aren't brought in." }];
+  if (changes.length) fields.push({ name: "accept", type: "checklist", label: "Changed in the file — untick any you want to keep as they are on this device", value: changes.map((c) => c.key), options: changes.map((c) => [c.key, c.text]) });
+  if (problems.length) fields.push({ type: "note", label: "Not merged:\n• " + problems.join("\n• ") });
+  const v = await formDialog(`Merge into "${project.title}"`, fields, { ok: "Merge" });
+  if (!v) return false;
+  const accepted = new Set(v.accept || []);
+
+  apply(project, scenePlan, scenePlan.changes.filter((c) => accepted.has("s" + c.id)).map((c) => c.id));
+  // With the new scenes in place, plan every shot again; accepted changes are matched by their wording.
+  const acceptedText = new Set(shotPlan.changes.filter((c) => accepted.has("b" + c.id)).map((c) => c.text));
+  const full = planShots(project, firstShots);
+  apply(project, full, full.changes.filter((c) => acceptedText.has(c.text)).map((c) => c.id));
+  for (const f of extra.fills) f();
+  extra.changes.forEach((c, i) => { if (accepted.has("x" + i)) c.apply(); });
+  return true;
+}

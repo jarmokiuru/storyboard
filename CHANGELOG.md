@@ -1,5 +1,13 @@
 # Changelog
 
+## 2026-10-25 — Storyboard v0.6.0 (INTEGRATION.md items 2–4)
+- Project file format written down in `docs/project-format.md` (format 1), so the chat side can read and write `.storyboard` files.
+- Starter projects: a `.storyboard` file with no drawings (scenes, shots, lenses, characters, sets) opens as a new project; ids, layers and thumbnails may be left out. A file from a newer version is refused with "reload the app".
+- Importing a project that's already on the device now offers **Merge**, next to Keep both and Replace: new scenes and shots added, empty fields filled, changed text, camera format, lens set, characters and set sizes listed to accept or keep. Drawings, 3D cameras, figures and furniture on the device are never touched; the aspect ratio is never changed by a merge.
+- The Shot Generator's Add menu uses the project's characters (body and height, e.g. A 182 cm); its lens buttons use the project's lens set when there is one.
+- Import → **Renumber list (.csv)…**: moves shots to new Kohtaus # / Kuva # numbers with all their drawings and 3D, all at once so swapped numbers don't collide; clashes and unknown numbers are listed and skipped.
+- Sample files: `samples/starter.storyboard`, `samples/renumber.csv`.
+
 ## 2026-10-25 — Storyboard v0.5.4
 - Lens/Focal and the 3D camera now agree (INTEGRATION.md item 1). The Shot Generator opens a board that has no 3D camera yet on the shot list's lens ("50mm", "Z 50mm", "Cooke S4 32mm T2" → 50 / 32 mm; a zoom "24-70mm" starts at 24 mm and shows the range in the readout). Saving with a different focal length updates the board's Lens/Focal to e.g. "85mm" and says so ("Lens/Focal changed 50mm → 85mm"). A zoom's text stays when the focal length is inside its range.
 
