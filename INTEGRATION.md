@@ -17,6 +17,8 @@ Markers as in `SPEC.md`: **[decision]** = Jarmo's call, don't change without ask
 ## App work, in priority order
 
 ### 1. Lens: shot list and 3D camera agree
+**Done in v0.5.4 (2026-10-25)** — `js/lens.js` reads the Lens/Focal text; the Shot Generator starts on it; *Save to board* / *Save as new board* write the focal length back as "NNmm" with a notice. One reading made here: a zoom text ("24-70mm") is left as it is when the 3D focal length is inside its range; outside the range it's replaced. Re-import needed no change (the existing change list already touches only `board.lens`).
+
 Verified in the code on 2026-10-25 (v0.5.2): `board.lens` (text from the shot list, e.g. "50mm") and `board.shot3d.camera.focal` are separate. The 3D camera always starts on 35 mm whatever the shot list says. The shot data sheet exports `board.lens`, so a lens changed in 3D never reaches it.
 - Opening the Shot Generator on a board with no 3D camera yet: start on the focal length parsed from `board.lens` ("50mm", "50 mm", "50", "Z 50mm" → 50). Fall back to 35 mm if nothing parses. A zoom range ("24-70mm") → use the first number and show the range in the readout.
 - *Save to board* with a focal length different from `board.lens`: update `board.lens` to the new value ("50mm"), and say so in a small notice, e.g. "Lens/Focal changed 35mm → 50mm".

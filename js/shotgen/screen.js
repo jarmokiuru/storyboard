@@ -5,6 +5,7 @@ import { Stage } from "./stage.js";
 import { defaultRoom } from "./set.js";
 import { SENSORS, PRIMES, DEFAULT_SENSOR, sensorById } from "./sensors.js";
 import { formDialog, toast } from "../ui.js";
+import { parseLens } from "../lens.js";
 import { Things } from "./things.js";
 import { figuresFor, startPlacing, addMenu, select, selectedItem, moveSelected, deleteSelected, subjectDistance, refreshSelected } from "./placing.js";
 import { uid, sceneOf, BOARD_WIDTH, boardHeight, heading } from "../model.js";
@@ -19,6 +20,7 @@ const SLIDERS = [
 
 let stage = null;
 let project, board, loc, shot, hooks, figures;
+let zoomRange = null;   // when the board's Lens/Focal is a zoom, e.g. [24, 70]
 let drag = null;
 const touches = new Map();
 
@@ -54,6 +56,10 @@ export function openShotGenerator(p, b, h) {
   hooks = h;
   loc = locationFor(project, sceneOf(project, board));
   shot = { ...defaultShot(loc.room), ...(board.shot3d?.camera || {}) };
+  // A board without a 3D camera yet starts on its shot-list lens (INTEGRATION.md item 1).
+  const lens = parseLens(board.lens);
+  zoomRange = lens?.range ?? null;
+  if (!board.shot3d && lens) shot.focal = lens.focal;
   if (!stage) {
     stage = new Stage($("sg-canvas"));
     // The panel is only rebuilt when a model finishes loading, never while someone is typing in it.
@@ -89,13 +95,15 @@ function save() {
   close();
 }
 
+
 // Storyboarder's "insert as new shot": keep working here, now on the new board.
 async function saveAsNew() {
   const made = await hooks.saveAsNew(picture(), shot3d());
   board = made.board;
   hooks.label = made.label;
+  zoomRange = parseLens(board.lens)?.range ?? null;
   $("sg-title").textContent = `${loc.name} · Board ${made.label}`;
-  toast(`Saved as new board ${made.label}. Keep framing, or go back to the board.`);
+  toast(`Saved as new board ${made.label}.${made.note ? " " + made.note + "." : ""} Keep framing, or go back to the board.`, 4000);
 }
 
 // ---------- controls ----------
@@ -155,7 +163,7 @@ function readout() {
   if (!stage?.hfov) return;
   const s = sensor();
   const d = subjectDistance();
-  const subject = d == null ? "" : ` · subject ${d.toFixed(2)} m`;
+  const subject = (d == null ? "" : ` · subject ${d.toFixed(2)} m`) + (zoomRange ? ` · zoom ${zoomRange[0]}–${zoomRange[1]} mm` : "");
   $("sg-readout").textContent = `${shot.focal} mm · ${stage.hfov.toFixed(1)}° horizontal · height ${Math.round(shot.height)} cm · tilt ${shot.tilt.toFixed(1)}°${subject} · ${s.camera} ${s.mode}`;
 }
 

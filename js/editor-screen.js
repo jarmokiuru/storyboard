@@ -13,6 +13,7 @@ import * as store from "./board-store.js";
 import { toast, confirmBox, formDialog, openMenu, shareFile, banner, pickFile, showText } from "./ui.js";
 import { exportProject } from "./projectfile.js";
 import { askOptions, makeContactSheet } from "./contact-sheet.js";
+import { lensMatches, lensText } from "./lens.js";
 import { importSpreadsheet, importScript } from "./importer.js";
 import { logText, clearLog } from "./pencil-log.js";
 import { shotSheetXlsx, shotSheetCsv, boardImagesZip, imageName } from "./shot-sheet.js";
@@ -724,24 +725,33 @@ async function openShotGen() {
     return toast("Couldn't open the Shot Generator: " + err.message, 5000);
   }
   let target = board;   // the board the Shot Generator saves to; moves on with "Save as new board"
+  // Returns a note when the board's Lens/Focal had to follow the 3D camera (INTEGRATION.md item 1).
   const keep = (b, picture, shot3d) => {
     b.shot3d = shot3d;
     // Height and tilt also go to the shot data sheet.
     b.camera = { height: shot3d.camera.height, tilt: shot3d.camera.tilt, pan: shot3d.camera.pan, focal: shot3d.camera.focal };
+    let note = "";
+    if (!lensMatches(b.lens, shot3d.camera.focal)) {
+      const old = (b.lens || "").trim();
+      b.lens = lensText(shot3d.camera.focal);
+      note = old ? `Lens/Focal changed ${old} → ${b.lens}` : `Lens/Focal set to ${b.lens}`;
+    }
     if (board === b) {
       view.drawReference(picture, "fill");
       renderLayers(b, view.activeLayer);
+      fillPanel(project, b);
     }
     edited();
     saveSoon(200);
+    return note;
   };
   mod.openShotGenerator(project, target, {
     label: boardLabel(project, target),
     changed: () => { metaDirty = true; saveSoon(); },
     close: () => { if (board === target) view.fit(); },
     save: (picture, shot3d) => {
-      keep(target, picture, shot3d);
-      toast("Saved to the board's reference layer. Draw over it, or dim it in Layers.");
+      const note = keep(target, picture, shot3d);
+      toast(`Saved to the board's reference layer.${note ? " " + note + "." : ""} Draw over it, or dim it in Layers.`, note ? 5000 : 2600);
     },
     // A new board after the current one, as the next shot (next Kuva #), with this camera view on it.
     saveAsNew: async (picture, shot3d) => {
@@ -751,8 +761,8 @@ async function openShotGen() {
       edited();
       refreshStrip();
       await selectBoard(b, true);
-      keep(b, picture, shot3d);
-      return { board: b, label: boardLabel(project, b) };
+      const note = keep(b, picture, shot3d);
+      return { board: b, label: boardLabel(project, b), note };
     },
   });
 }

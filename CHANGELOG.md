@@ -1,5 +1,8 @@
 # Changelog
 
+## 2026-10-25 — Storyboard v0.5.4
+- Lens/Focal and the 3D camera now agree (INTEGRATION.md item 1). The Shot Generator opens a board that has no 3D camera yet on the shot list's lens ("50mm", "Z 50mm", "Cooke S4 32mm T2" → 50 / 32 mm; a zoom "24-70mm" starts at 24 mm and shows the range in the readout). Saving with a different focal length updates the board's Lens/Focal to e.g. "85mm" and says so ("Lens/Focal changed 50mm → 85mm"). A zoom's text stays when the focal length is inside its range.
+
 ## 2026-10-25 — Storyboard v0.5.3
 - Shot Generator: **Save as new board** puts the camera view on a new board right after the current one, as the next shot (next Kuva #), and keeps you in the Shot Generator on that new board — frame the next angle and save again. Like Storyboarder's "insert as new shot".
 
