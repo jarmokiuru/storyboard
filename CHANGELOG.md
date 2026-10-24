@@ -1,5 +1,14 @@
 # Changelog
 
+## 2026-10-24 — Storyboard v0.4.0 (phase 4, step 1: set and camera)
+- Shot Generator (button in the board panel) opens full screen.
+- Set per location, shared by every scene shot there: room width, depth and ceiling height, a door and a window placed on any wall, or an exterior (ground and horizon). Tagged measured / traced / assumed. The sample kitchen is 5.0 m west–east × 4.0 m north–south, 2.6 m ceiling.
+- Camera with real lenses: camera format from verified ARRI sizes (ALEXA 35, ALEXA Mini LF, ALEXA Mini) or generic Super 35 / full frame; primes 14–135 mm or any focal length; angle of view from the sensor area the frame actually uses.
+- Views: Camera (masked to the project ratio), Top (plan) and Orbit, with a small inset of the other view. Drag to pan/tilt in the camera view; in the top view drag the camera to move it and the end of its yellow lines to aim it. Height, pan, tilt and roll sliders; readout of focal length, horizontal angle of view, height and tilt.
+- Mac keys in the Shot Generator: W/A/S/D move, R/F up/down, Z/X roll, arrows pan/tilt, Esc back.
+- Save to board puts the camera view on the board's reference layer and keeps the camera, so reopening carries on from it. Camera height and tilt go into the shot data sheet.
+- Bundled offline: three.js 0.186.1 and Wonder Unit's essential figures and objects (MIT), listed in vendor/LICENSES.md.
+
 ## 2026-10-23 — Storyboard v0.3.6
 - Shot data sheet (Export → Shot data sheet .xlsx / .csv): one row per board with Kohtaus #, Kuva #, Board (1, 1b…), Kuvakoko, Lens/Focal, camera height (cm), tilt (°), Movement and the board's image file name. Camera height and tilt stay empty until the Shot Generator (phase 4) fills them.
 - All boards as PNGs (.zip): every board at full size, named as in the sheet (e.g. 1-1b.png). The single-board PNG uses the same name.

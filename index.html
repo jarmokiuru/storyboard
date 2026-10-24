@@ -12,6 +12,7 @@
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="apple-touch-icon" href="icons/icon-180.png">
 <link rel="stylesheet" href="css/app.css">
+<script type="importmap">{ "imports": { "three": "./vendor/three/build/three.module.js" } }</script>
 </head>
 <body>
 
@@ -79,7 +80,7 @@
       <button id="new-shot" title="Next Kuva # (N)">New shot</button>
       <button id="dup-board">Duplicate</button>
       <button id="del-board" class="danger">Delete board</button>
-      <button disabled title="Comes in phase 4">Shot Generator</button>
+      <button id="shotgen-btn">Shot Generator</button>
     </section>
     <section>
       <h3>Layers</h3>
@@ -97,6 +98,36 @@
   </aside>
 
   <footer id="strip"></footer>
+</section>
+
+<section id="shotgen" hidden>
+  <header class="bar">
+    <button id="sg-back">‹ Board</button>
+    <span id="sg-title" class="title"></span>
+    <div id="sg-views" class="seg">
+      <button data-view="camera" class="on">Camera</button>
+      <button data-view="top">Top</button>
+      <button data-view="orbit">Orbit</button>
+    </div>
+    <span class="spacer"></span>
+    <button id="sg-set">Set…</button>
+    <button id="sg-save" class="primary">Save to board</button>
+  </header>
+  <main id="sg-stage">
+    <canvas id="sg-canvas"></canvas>
+    <div id="sg-readout"></div>
+  </main>
+  <aside id="sg-panel">
+    <label><span>Camera format</span><select id="sg-sensor"></select></label>
+    <div class="sg-lens">
+      <span class="muted">Lens (mm)</span>
+      <div id="sg-lenses"></div>
+      <label class="sg-free"><span>Other</span><input id="sg-focal" inputmode="decimal" autocomplete="off"></label>
+    </div>
+    <div id="sg-sliders"></div>
+    <button id="sg-reset">Reset camera</button>
+    <p class="muted sg-hint">Camera view: drag to pan and tilt. Top view: drag the camera to move it, the yellow lines' tip to aim it, the floor to look around; pinch to zoom. Tap the small view to swap.</p>
+  </aside>
 </section>
 
 <div id="menu" hidden></div>

@@ -68,6 +68,7 @@ export function initEditor({ exit }) {
   $("focus-btn").onclick = () => setLayout({ focus: !layout.focus });
   setLayout({});
   $("fit").onclick = () => view.fit();
+  $("shotgen-btn").onclick = openShotGen;
   $("scene-jump").onchange = (e) => selectBoard(sceneBoards(project, e.target.value)[0], true);
 
   window.addEventListener("resize", () => project && view.fit());
@@ -482,7 +483,7 @@ function pickedColour(hex) {
 
 // Mac keyboard shortcuts (SPEC §6.2).
 function keyDown(e) {
-  if ($("editor-screen").hidden || !board) return;
+  if ($("editor-screen").hidden || !board || !$("shotgen").hidden) return;
   if (e.target.matches?.("input, textarea, select") || document.querySelector("dialog[open]")) return;
   const key = e.key.toLowerCase();
   if (e.metaKey || e.ctrlKey) {
@@ -605,6 +606,37 @@ async function exportProjectFile() {
   project.firstEditSinceExport = null;
   await db.putProject(project);
   exportNote();
+}
+
+// ---------- Shot Generator ----------
+
+async function openShotGen() {
+  await flush();
+  toast("Opening the Shot Generator…");
+  let mod;
+  try {
+    mod = await import("./shotgen/screen.js");
+  } catch (err) {
+    return toast("Couldn't open the Shot Generator: " + err.message, 5000);
+  }
+  const b = board;
+  mod.openShotGenerator(project, b, {
+    label: boardLabel(project, b),
+    changed: () => { metaDirty = true; saveSoon(); },
+    close: () => { if (board === b) view.fit(); },
+    save: (picture, shot3d) => {
+      b.shot3d = shot3d;
+      // Height and tilt also go to the shot data sheet.
+      b.camera = { height: shot3d.camera.height, tilt: shot3d.camera.tilt, pan: shot3d.camera.pan, focal: shot3d.camera.focal };
+      if (board === b) {
+        view.drawReference(picture, "fill");
+        renderLayers(b, view.activeLayer);
+      }
+      edited();
+      saveSoon(200);
+      toast("Saved to the board's reference layer. Draw over it, or dim it in Layers.");
+    },
+  });
 }
 
 async function exportContactSheet() {
