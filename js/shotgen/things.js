@@ -13,12 +13,14 @@ const SELECT = 0xf0b429;
 const rad = (d) => (d * Math.PI) / 180;
 
 export class Things {
-  constructor(scene, onChange) {
+  // onChange: something moved or changed (redraw). onLoaded: a model finished loading (its real size is known).
+  constructor(scene, onChange, onLoaded) {
     this.group = new THREE.Group();
     this.group.name = "things";
     scene.add(this.group);
     this.nodes = new Map();   // id → { holder, model, size, fig, mark, item }
     this.onChange = onChange;
+    this.onLoaded = onLoaded;
     this.selectedId = null;
   }
 
@@ -54,6 +56,9 @@ export class Things {
       n.mark = this.planMark(item, made.size);
       n.labelName = item.name;
       holder.add(n.mark);
+      n.item = item;
+      this.place(n);
+      this.onLoaded?.(item.id);
     }
     n.item = item;
     this.place(n);

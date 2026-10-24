@@ -401,5 +401,9 @@ dialog label span { color: var(--muted); }
 #sg-selected { display: grid; gap: 8px; padding: 10px; border-radius: var(--radius); background: var(--raised); }
 #sg-selected h3 { margin: 0; font-size: 12px; text-transform: uppercase; letter-spacing: 0.06em; color: #f0b429; }
 #sg-selected p { margin: 0; font-size: 13px; }
-.sg-dims { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
 .sg-sel-buttons { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+.sg-num { display: grid; grid-template-columns: 52px 1fr 58px 18px; gap: 6px; align-items: center; font-size: 13px; }
+.sg-num span { color: var(--muted); }
+.sg-num input[type=range] { padding: 0; border: 0; background: transparent; min-height: 30px; }
+.sg-num .num { min-height: 32px; padding: 4px 6px; text-align: right; font-variant-numeric: tabular-nums; }
+.sg-num em { font-style: normal; color: var(--muted); }

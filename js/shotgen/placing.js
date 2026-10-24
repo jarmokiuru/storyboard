@@ -151,6 +151,16 @@ export function subjectDistance() {
   return Math.hypot(it.x - s.x, eye - s.height / 100, it.z - s.z);
 }
 
+// A number with its own slider: drag the slider, type in the box, use ↑/↓ in the box (Shift = ×10),
+// or scroll over either.
+function numberRow(label, key, min, max, step, unit) {
+  return `<div class="sg-num" data-key="${key}" data-min="${min}" data-max="${max}" data-step="${step}">
+    <span>${label}</span>
+    <input type="range" min="${min}" max="${max}" step="${step}" aria-label="${label}">
+    <input class="num" inputmode="decimal" autocomplete="off" aria-label="${label} (${unit})"><em>${unit}</em>
+  </div>`;
+}
+
 function showSelected() {
   const box = $("sg-selected");
   const it = selectedItem();
@@ -159,31 +169,64 @@ function showSelected() {
   const isFig = it.kind === "figure";
   box.innerHTML = `
     <h3>${isFig ? "Figure" : "Selected"}</h3>
-    ${isFig ? `<label><span>Name</span><input data-f="name" autocomplete="off"></label>
-               <label><span>Height (cm)</span><input data-f="height" inputmode="decimal"></label>`
-            : `<p class="muted sg-what"></p>
-               <div class="sg-dims">
-                 <label><span>Width</span><input data-f="w" inputmode="decimal"></label>
-                 <label><span>Depth</span><input data-f="d" inputmode="decimal"></label>
-                 <label><span>Height</span><input data-f="h" inputmode="decimal"></label>
-               </div><p class="muted sg-unit">cm · shared by every scene in this set</p>`}
-    <label class="sg-slider"><span>Turn</span><input type="range" min="-180" max="180" step="5" data-f="rot"><output></output></label>
+    ${isFig
+      ? `<label><span>Name</span><input data-f="name" autocomplete="off"></label>${numberRow("Height", "height", 30, 230, 1, "cm")}`
+      : `<p class="muted sg-what"></p>
+         ${numberRow("Width", "w", 5, 800, 1, "cm")}
+         ${numberRow("Depth", "d", 5, 800, 1, "cm")}
+         ${numberRow("Height", "h", 5, 400, 1, "cm")}
+         <p class="muted sg-unit">Shared by every scene in this set</p>`}
+    ${numberRow("Turn", "rot", -180, 180, 5, "°")}
     <div class="sg-sel-buttons"><button data-act="delete" class="danger">Delete</button><button data-act="done">Done</button></div>`;
   if (!isFig) box.querySelector(".sg-what").textContent = byId(it.model)?.label || it.model;
-  for (const input of box.querySelectorAll("[data-f]")) input.value = it[input.dataset.f] ?? "";
-  box.querySelector("output").textContent = it.rot + "°";
+  const name = box.querySelector("[data-f=name]");
+  if (name) name.value = it.name;
 
-  box.oninput = (e) => {
-    const f = e.target.dataset.f;
-    if (!f) return;
-    it[f] = f === "name" ? e.target.value : num(e.target.value, it[f]);
-    if (f === "rot") box.querySelector("output").textContent = it.rot + "°";
-    if (["w", "d", "h"].includes(f)) it[f] = Math.max(5, it[f]);
-    if (f === "height") it.height = Math.max(30, Math.min(230, it.height));
+  const rows = [...box.querySelectorAll(".sg-num")];
+  const show = (row) => {
+    const v = it[row.dataset.key] ?? 0;
+    row.querySelector("input[type=range]").value = v;
+    const text = row.querySelector(".num");
+    if (document.activeElement !== text) text.value = v;
+  };
+  rows.forEach(show);
+
+  // Every change goes through here: clamp, store, redraw. The panel itself is never rebuilt.
+  const setValue = (row, v) => {
+    const { key } = row.dataset;
+    const min = Number(row.dataset.min);
+    const max = Number(row.dataset.max);
+    if (!Number.isFinite(v)) return;
+    it[key] = Math.round(Math.min(max, Math.max(min, v)) * 10) / 10;
+    show(row);
     ctx.things.put(it);
     if (!isFig) ctx.setChanged();
     ctx.redraw();
   };
+  const stepBy = (row, dir, big) => setValue(row, (it[row.dataset.key] ?? 0) + dir * Number(row.dataset.step) * (big ? 10 : 1));
+
+  for (const row of rows) {
+    const range = row.querySelector("input[type=range]");
+    const text = row.querySelector(".num");
+    range.oninput = () => { setValue(row, Number(range.value)); text.value = it[row.dataset.key]; };
+    text.oninput = () => { if (text.value.trim() !== "") setValue(row, num(text.value, NaN)); };
+    text.onchange = () => { text.value = it[row.dataset.key]; };
+    text.onkeydown = (e) => {
+      if (e.key === "ArrowUp" || e.key === "ArrowDown") {
+        e.preventDefault();
+        stepBy(row, e.key === "ArrowUp" ? 1 : -1, e.shiftKey);
+        text.value = it[row.dataset.key];
+      }
+      if (e.key === "Enter") text.blur();
+    };
+    row.addEventListener("wheel", (e) => {
+      e.preventDefault();
+      stepBy(row, e.deltaY < 0 ? 1 : -1, e.shiftKey);
+      text.value = it[row.dataset.key];
+    }, { passive: false });
+  }
+  if (name) name.oninput = () => { it.name = name.value; ctx.things.put(it); ctx.redraw(); };
+
   box.onclick = (e) => {
     const act = e.target.dataset?.act;
     if (act === "delete") deleteSelected();

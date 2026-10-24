@@ -186,6 +186,7 @@ export class Stage {
 
   // Plan position (x, z in metres) under a point in the top view. px, py: CSS pixels on the canvas.
   topToGround(px, py, rect) {
+    this.aimTop(rect.w / rect.h);   // match the rectangle asked about, not whatever was drawn last
     const c = this.topCam;
     const nx = ((px - rect.x) / rect.w) * 2 - 1;
     const ny = 1 - ((py - rect.y) / rect.h) * 2;
@@ -194,6 +195,7 @@ export class Stage {
 
   // Pixels per metre in the top view, for hit-testing.
   topScale(rect) {
+    this.aimTop(rect.w / rect.h);
     return rect.w / (this.topCam.right - this.topCam.left);
   }
 

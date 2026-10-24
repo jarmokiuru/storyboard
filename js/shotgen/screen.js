@@ -56,7 +56,8 @@ export function openShotGenerator(p, b, h) {
   shot = { ...defaultShot(loc.room), ...(board.shot3d?.camera || {}) };
   if (!stage) {
     stage = new Stage($("sg-canvas"));
-    stage.things = new Things(stage.scene, () => { stage.request(); refreshSelected(); readout(); });
+    // The panel is only rebuilt when a model finishes loading, never while someone is typing in it.
+    stage.things = new Things(stage.scene, () => { stage.request(); readout(); }, () => refreshSelected());
     bind();
   }
   $("shotgen").hidden = false;
@@ -215,6 +216,15 @@ function bind() {
     const f = num(e.target.value, shot.focal);
     if (f >= 4 && f <= 1200) { shot.focal = f; apply(); }
   };
+  // Scrolling over a camera slider steps it (Shift = ×10).
+  $("sg-sliders").addEventListener("wheel", (e) => {
+    const input = e.target.closest?.(".sg-slider")?.querySelector("input");
+    if (!input) return;
+    e.preventDefault();
+    const step = Number(input.step) * (e.shiftKey ? 10 : 1) * (e.deltaY < 0 ? 1 : -1);
+    input.value = Math.min(Number(input.max), Math.max(Number(input.min), Number(input.value) + step));
+    input.dispatchEvent(new Event("input", { bubbles: true }));
+  }, { passive: false });
   $("sg-sliders").addEventListener("input", (e) => {
     const key = e.target.dataset?.key;
     if (key) { shot[key] = Number(e.target.value); apply(); }
@@ -248,31 +258,45 @@ function down(e) {
     if (touches.size === 2) { drag = { mode: "pinch", d: spread(), span: stage.top.span, r: stage.orbit.r, focal: shot.focal }; return; }
   }
   if (drag) return;
+  const { main, inset } = stage.layout();   // where things are now, not in the last drawn frame
 
-  // A tap on the inset swaps it with the main view.
-  if (inside(p, stage.insetRect)) {
-    drag = { mode: "swap", id: e.pointerId };
+  // The small plan in the camera view works like the top view: drag the camera or a piece to move it.
+  // A tap on an empty part of it (or on the small camera picture in the other views) swaps the views.
+  if (inside(p, inset)) {
+    drag = (stage.view === "camera" && planGrab(e, p, inset)) || { mode: "swap", id: e.pointerId, start: p, tap: true };
     return;
   }
-  const rect = stage.mainRect;
+  const rect = main;
+  if (stage.view === "top") {
+    drag = planGrab(e, p, rect, true);
+    drag.start = p;
+    return;
+  }
   if (stage.view === "camera") {
     drag = { mode: "look", id: e.pointerId, x: p.x, y: p.y, pan: shot.pan, tilt: shot.tilt, rect, tap: true };
-  } else if (stage.view === "top") {
-    const g = stage.topToGround(p.x, p.y, rect);
-    const near = 28 / stage.topScale(rect);   // about a fingertip, in metres
-    const aim = { x: shot.x + Math.sin((shot.pan * Math.PI) / 180) * 1.2, z: shot.z - Math.cos((shot.pan * Math.PI) / 180) * 1.2 };
-    const item = stage.things.hitPlan(g.x, g.z, near * 0.4);
-    if (Math.hypot(g.x - shot.x, g.z - shot.z) < near) drag = { mode: "move", id: e.pointerId, rect };
-    else if (Math.hypot(g.x - aim.x, g.z - aim.z) < near * 1.5) drag = { mode: "aim", id: e.pointerId, rect };
-    else if (item) {
-      select(item);
-      const it = selectedItem();
-      drag = { mode: "item", id: e.pointerId, rect, dx: it.x - g.x, dz: it.z - g.z };
-    } else drag = { mode: "map", id: e.pointerId, x: p.x, y: p.y, cx: stage.top.cx, cz: stage.top.cz, rect, tap: true };
   } else {
     drag = { mode: "orbit", id: e.pointerId, x: p.x, y: p.y, theta: stage.orbit.theta, phi: stage.orbit.phi, rect, tap: true };
   }
   drag.start = p;
+}
+
+// What a press on a plan (top view or the small plan) grabs: the camera, its aim point, a piece, or — for the
+// top view — the floor to look around. Returns null when it grabs nothing (small plan only).
+function planGrab(e, p, rect, isMain = false) {
+  const g = stage.topToGround(p.x, p.y, rect);
+  // About a fingertip, in metres — but never more than 0.6 m, or on the small plan the camera's handles
+  // would swallow the furniture around them.
+  const near = Math.min(28 / stage.topScale(rect), 0.6);
+  const aim = { x: shot.x + Math.sin((shot.pan * Math.PI) / 180) * 1.2, z: shot.z - Math.cos((shot.pan * Math.PI) / 180) * 1.2 };
+  if (Math.hypot(g.x - shot.x, g.z - shot.z) < near) return { mode: "move", id: e.pointerId, rect };
+  const item = stage.things.hitPlan(g.x, g.z, near * 0.3);
+  if (item) {
+    select(item);
+    const it = selectedItem();
+    return { mode: "item", id: e.pointerId, rect, dx: it.x - g.x, dz: it.z - g.z };
+  }
+  if (Math.hypot(g.x - aim.x, g.z - aim.z) < near) return { mode: "aim", id: e.pointerId, rect };
+  return isMain ? { mode: "map", id: e.pointerId, x: p.x, y: p.y, cx: stage.top.cx, cz: stage.top.cz, rect, tap: true } : null;
 }
 
 function move(e) {
@@ -295,9 +319,10 @@ function move(e) {
   }
   if (drag.mode === "look" && drag.tap) return;   // could still be a tap
   if (drag.mode === "look") {
-    // Drag right = camera turns right; drag up = camera tilts up. Speed matches the lens's angle of view.
-    shot.pan = wrap(drag.pan + ((p.x - drag.x) / drag.rect.w) * stage.hfov);
-    shot.tilt = clamp(drag.tilt - ((p.y - drag.y) / drag.rect.h) * stage.shotCam.fov, -90, 90);
+    // The picture follows the finger (Jarmo's choice): drag right = camera pans left, drag up = camera tilts down.
+    // Speed matches the lens's angle of view, so a point stays under the finger.
+    shot.pan = wrap(drag.pan - ((p.x - drag.x) / drag.rect.w) * stage.hfov);
+    shot.tilt = clamp(drag.tilt + ((p.y - drag.y) / drag.rect.h) * stage.shotCam.fov, -90, 90);
     apply();
   } else if (drag.mode === "move") {
     const g = stage.topToGround(p.x, p.y, drag.rect);
@@ -323,8 +348,11 @@ function move(e) {
 function up(e) {
   touches.delete(e.pointerId);
   if (!drag) return;
-  if (drag.mode === "swap" && drag.id === e.pointerId) setView(stage.view === "camera" ? "top" : "camera");
-  if (drag.tap && drag.id === e.pointerId) tapSelect(local(e), drag);
+  if (drag.mode === "swap") {
+    if (drag.tap && drag.id === e.pointerId) setView(stage.view === "camera" ? "top" : "camera");
+  } else if (drag.tap && drag.id === e.pointerId) {
+    tapSelect(local(e), drag);
+  }
   if (drag.mode === "pinch" ? touches.size === 0 : drag.id === e.pointerId) drag = null;
 }
 
@@ -375,6 +403,7 @@ function keys(e) {
   if ($("shotgen").hidden || typing(e.target) || document.querySelector("dialog[open]") || e.metaKey || e.ctrlKey) return;
   const key = e.key.toLowerCase();
   fast = e.shiftKey;
+  if (e.target.type === "range" && key.startsWith("arrow")) return;   // a chosen slider steps with the arrows
   if (MOVES[key] || key === "r" || key === "f") {
     e.preventDefault();
     e.stopPropagation();

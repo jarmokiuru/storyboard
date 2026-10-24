@@ -1,5 +1,12 @@
 # Changelog
 
+## 2026-10-25 — Storyboard v0.5.1
+- Camera view: dragging now moves the picture with your finger — drag right and the camera pans left, drag up and it tilts down.
+- Typing a size no longer deletes the piece: the panel used to redraw after every digit, so the next Backspace landed on "delete". It now stays put while you type.
+- Every number for a chosen piece or figure has its own slider, plus ↑/↓ in the box (Shift = 10 at a time) and scrolling over the row. Camera sliders also take scrolling and, once tapped, the arrow keys.
+- The small plan in the corner of the camera view works like the Top view: drag furniture, figures or the camera there. Tapping an empty part still swaps the views.
+- Grabbing on a small plan prefers furniture over the camera's aim point, and touches always use the current layout.
+
 ## 2026-10-24 — Storyboard v0.5.0 (board keys like Storyboarder; Shot Generator step 2: furniture and figures)
 - Board editor keys now match Storyboarder 3.0: 1 light pencil, 2 brush, 4 pencil, 5 pen, 6 note pen, 7 eraser (3 is Storyboarder's tone tool, not built); 8/9/0 tool colours; N new board, Shift-N new board before, D duplicate, / toggle new shot, Alt-←/→ move board, Cmd-←/→ previous/next scene, O onion skin, Tab cycle view, Backspace clear all drawing layers (one undo brings them back), Alt-Backspace clear the active layer, Alt-drag quick erase, Cmd-0 / Cmd-+ / Cmd-- zoom, Cmd-P contact sheet, Cmd-Shift-P blank worksheet, Cmd-Backspace delete board. Cmd-K lists all keys. Colour pick moved to holding I and clicking (Alt now erases, as in Storyboarder).
 - Shot Generator: Add menu with the figures named in the scene's Henkilöt, any other figure (body type and height in cm), and 37 pieces of furniture and props.
