@@ -26,7 +26,8 @@ export const SENSORS = [
 ];
 
 export const DEFAULT_SENSOR = "mlf-45k-og";
-export const PRIMES = [14, 18, 21, 25, 29, 32, 35, 40, 50, 65, 75, 100, 135];
+// Jarmo's prime set (his choice, 2026-10-24). Any other focal length can be typed in.
+export const PRIMES = [14, 18, 25, 35, 50, 85, 100, 135, 150, 180];
 
 export const sensorById = (id) => SENSORS.find((s) => s.id === id) || SENSORS.find((s) => s.id === DEFAULT_SENSOR);
 export const sensorLabel = (s) => `${s.camera} ${s.mode} (${s.w} × ${s.h} mm)`;

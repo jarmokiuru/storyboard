@@ -38,7 +38,7 @@ function locationFor(p, scene) {
 }
 
 function defaultShot(room) {
-  return { x: 0, z: room.exterior ? 6 : room.d / 2 - 0.4, height: 150, pan: 0, tilt: 0, roll: 0, focal: 32 };
+  return { x: 0, z: room.exterior ? 6 : room.d / 2 - 0.4, height: 150, pan: 0, tilt: 0, roll: 0, focal: 35 };
 }
 
 const sensor = () => sensorById(project.sensor || DEFAULT_SENSOR);
@@ -211,6 +211,8 @@ function bind() {
   for (const t of ["touchstart", "touchmove"]) canvas.addEventListener(t, (e) => e.preventDefault(), { passive: false });
   window.addEventListener("resize", () => { if (!$("shotgen").hidden) stage.resize(); });
   document.addEventListener("keydown", keys);
+  document.addEventListener("keyup", keyUp);
+  window.addEventListener("blur", () => held.clear());
 }
 
 const inside = (p, r) => p.x >= r.x && p.x <= r.x + r.w && p.y >= r.y && p.y <= r.y + r.h;
@@ -225,7 +227,7 @@ function down(e) {
   const p = local(e);
   if (e.pointerType === "touch") {
     touches.set(e.pointerId, p);
-    if (touches.size === 2) { drag = { mode: "pinch", d: spread(), span: stage.top.span, r: stage.orbit.r }; return; }
+    if (touches.size === 2) { drag = { mode: "pinch", d: spread(), span: stage.top.span, r: stage.orbit.r, focal: shot.focal }; return; }
   }
   if (drag) return;
 
@@ -255,9 +257,7 @@ function move(e) {
   if (!drag) return;
   if (drag.mode === "pinch") {
     const k = drag.d / Math.max(1, spread());
-    if (stage.view === "top") stage.top.span = Math.min(60, Math.max(2, drag.span * k));
-    else if (stage.view === "orbit") stage.orbit.r = Math.min(60, Math.max(1.5, drag.r * k));
-    stage.request();
+    zoom(k, drag);
     return;
   }
   if (drag.id !== e.pointerId) return;
@@ -294,43 +294,79 @@ function up(e) {
   if (drag.mode === "pinch" ? touches.size === 0 : drag.id === e.pointerId) drag = null;
 }
 
-function wheel(e) {
-  e.preventDefault();
-  const k = Math.exp(e.deltaY * 0.002);
-  if (stage.view === "top") stage.top.span = Math.min(60, Math.max(2, stage.top.span * k));
-  else if (stage.view === "orbit") stage.orbit.r = Math.min(60, Math.max(1.5, stage.orbit.r * k));
-  stage.request();
+// Pinch or scroll. Camera view: zooms the lens, like Storyboarder's scroll wheel. Top and orbit: zoom the view.
+// k > 1 = wider / further out. from: the values when the pinch started (scrolling zooms from the current ones).
+function zoom(k, from = { span: stage.top.span, r: stage.orbit.r, focal: shot.focal }) {
+  if (stage.view === "camera") {
+    shot.focal = Math.round(clamp(from.focal / k, 8, 400) * 2) / 2;
+    apply();
+  } else if (stage.view === "top") {
+    stage.top.span = clamp(from.span * k, 2, 60);
+    stage.request();
+  } else {
+    stage.orbit.r = clamp(from.r * k, 1.5, 60);
+    stage.request();
+  }
 }
 
-// Mac: W/A/S/D move, R/F up and down, Z/X roll, arrow keys pan and tilt (our mapping, SPEC §8.4).
-function keys(e) {
-  if ($("shotgen").hidden || e.target.matches?.("input, select, textarea") || document.querySelector("dialog[open]")) return;
-  const step = e.shiftKey ? 0.5 : 0.1;
-  const a = (shot.pan * Math.PI) / 180;
-  const fwd = { x: Math.sin(a), z: -Math.cos(a) };
-  const map = {
-    w: () => { shot.x += fwd.x * step; shot.z += fwd.z * step; },
-    s: () => { shot.x -= fwd.x * step; shot.z -= fwd.z * step; },
-    a: () => { shot.x += fwd.z * step; shot.z -= fwd.x * step; },
-    d: () => { shot.x -= fwd.z * step; shot.z += fwd.x * step; },
-    r: () => { shot.height = clamp(shot.height + step * 50, 10, 400); },
-    f: () => { shot.height = clamp(shot.height - step * 50, 10, 400); },
-    z: () => { shot.roll = clamp(shot.roll - 1, -45, 45); },
-    x: () => { shot.roll = clamp(shot.roll + 1, -45, 45); },
-    arrowleft: () => { shot.pan = wrap(shot.pan - 1); },
-    arrowright: () => { shot.pan = wrap(shot.pan + 1); },
-    arrowup: () => { shot.tilt = clamp(shot.tilt + 1, -90, 90); },
-    arrowdown: () => { shot.tilt = clamp(shot.tilt - 1, -90, 90); },
-    escape: close,
-  };
-  const fn = map[e.key.toLowerCase()];
-  if (!fn) return;
+function wheel(e) {
   e.preventDefault();
-  e.stopPropagation();
-  fn();
-  shot.x = round(shot.x);
-  shot.z = round(shot.z);
+  zoom(Math.exp(e.deltaY * 0.002));
+}
+
+// Mac keys, as in Storyboarder's Shot Generator: W/A/S/D or the arrows move the camera, R/F raise and lower it,
+// Shift moves faster. Movement is smooth while a key is held. Z/X roll, Esc goes back to the board.
+const MOVES = { w: [0, 1], arrowup: [0, 1], s: [0, -1], arrowdown: [0, -1], a: [-1, 0], arrowleft: [-1, 0], d: [1, 0], arrowright: [1, 0] };
+const SPEED = 1.2;        // metres per second; Shift × 3
+const LIFT = 0.6;         // metres per second up or down
+const held = new Set();
+let fast = false;
+let lastTick = 0;
+
+// Keys typed into a text box stay there; sliders and buttons don't keep the keys.
+const typing = (t) => t.matches?.("textarea, select, input:not([type=range]):not([type=checkbox]):not([type=button])");
+
+function keys(e) {
+  if ($("shotgen").hidden || typing(e.target) || document.querySelector("dialog[open]") || e.metaKey || e.ctrlKey) return;
+  const key = e.key.toLowerCase();
+  fast = e.shiftKey;
+  if (MOVES[key] || key === "r" || key === "f") {
+    e.preventDefault();
+    e.stopPropagation();
+    if (!held.size) {
+      lastTick = performance.now();
+      requestAnimationFrame(tick);
+    }
+    held.add(key);
+    return;
+  }
+  const other = { z: () => (shot.roll = clamp(shot.roll - 1, -45, 45)), x: () => (shot.roll = clamp(shot.roll + 1, -45, 45)), escape: close };
+  if (!other[key]) return;
+  e.preventDefault();
+  other[key]();
   if (!$("shotgen").hidden) apply();
+}
+
+function keyUp(e) {
+  held.delete(e.key.toLowerCase());
+  fast = e.shiftKey;
+}
+
+function tick(now) {
+  if (!held.size || $("shotgen").hidden) return held.clear();
+  const dt = Math.min(0.1, (now - lastTick) / 1000);
+  lastTick = now;
+  let fwd = 0;
+  let side = 0;
+  for (const k of held) if (MOVES[k]) { side += MOVES[k][0]; fwd += MOVES[k][1]; }
+  const step = SPEED * (fast ? 3 : 1) * dt;
+  const a = (shot.pan * Math.PI) / 180;
+  shot.x = round(shot.x + (Math.sin(a) * fwd + Math.cos(a) * side) * step);
+  shot.z = round(shot.z + (-Math.cos(a) * fwd + Math.sin(a) * side) * step);
+  if (held.has("r")) shot.height = clamp(shot.height + LIFT * 100 * dt * (fast ? 3 : 1), 10, 400);
+  if (held.has("f")) shot.height = clamp(shot.height - LIFT * 100 * dt * (fast ? 3 : 1), 10, 400);
+  apply();
+  requestAnimationFrame(tick);
 }
 
 function spread() {

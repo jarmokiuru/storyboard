@@ -179,12 +179,13 @@ Modelled on Storyboarder's Shot Generator [verified in outline: main camera view
 ### 8.4 Camera
 - Views: **camera** (what the lens sees, masked to the aspect ratio), **top** (plan view, drag to place camera and figures), **orbit** (free look).
 - Move in top view by dragging; height slider in cm; pan / tilt / roll with readouts in degrees.
-- **Lens:** focal length in mm from the project's lens set (default primes: 14, 18, 21, 25, 29, 32, 35, 40, 50, 65, 75, 100, 135 mm) or a free value.
+- **Lens:** focal length in mm from the project's lens set (default primes, Jarmo's set: 14, 18, 25, 35, 50, 85, 100, 135, 150, 180 mm [decision 2026-10-24]) or a free value.
 - **Angle of view comes from the sensor, not a generic "35 mm equivalent".** Project camera format presets: ARRI Alexa 35, ARRI Alexa Mini LF, ARRI Alexa Mini (Super 35), generic Super 35, generic full frame. [verify at build: take active sensor dimensions for each recording format from ARRI's own spec pages — do not hard-code from memory.] Custom width × height in mm allowed.
 - Readout on screen: focal length, horizontal angle of view, camera height, tilt, subject distance to the selected character.
 - **Shot-size presets** (ECU, CU, MCU, MS, MLS, LS/FS, WS, EWS — use Jarmo's `Kuvakoko` abbreviations once known): with a character selected, place the camera at the distance that gives that framing with the current lens, keeping the current direction.
 - Camera body and frustum visible in top view.
-- Mac keys: W/A/S/D move, R/F up/down, Z/X roll [Storyboarder lists these keys; exact mapping unverified — this mapping is our choice].
+- Mac keys as in Storyboarder 3.0's Shot Generator [verified from its key handling, read-only, 2026-10-24]: W/A/S/D or arrow keys move (forward/left/back/right, smooth while held), R/F up/down, Shift faster; scroll wheel zooms the lens. Z/X roll and Esc are ours.
+- Zoom: pinch or scroll in the camera view changes the focal length; in the top and orbit views it zooms the view [decision 2026-10-24].
 
 ### 8.5 Rendering and performance
 - Flat grey "clay" look with a simple key + fill; optional single sun direction.

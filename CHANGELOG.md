@@ -1,5 +1,10 @@
 # Changelog
 
+## 2026-10-24 — Storyboard v0.4.2
+- Shot Generator zoom: pinch or scroll in the camera view zooms the lens (focal length); in the top and orbit views it zooms the view.
+- Camera moves with W/A/S/D or the arrow keys, smoothly while held, R/F up and down, Shift faster — as in Storyboarder's Shot Generator. Keys keep working after touching a slider or lens button.
+- Lens buttons are your set: 14, 18, 25, 35, 50, 85, 100, 135, 150, 180 mm. New cameras start on 35 mm.
+
 ## 2026-10-24 — Storyboard v0.4.1
 - Updates now always download fresh files. Before, the offline copy could be built from files Safari had kept from the previous version (GitHub Pages lets it keep them 10 minutes), so Reload could bring back the old version. Same fix in the pencil test (v0.1.1).
 
