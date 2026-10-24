@@ -1,5 +1,8 @@
 # Changelog
 
+## 2026-10-24 — Storyboard v0.4.1
+- Updates now always download fresh files. Before, the offline copy could be built from files Safari had kept from the previous version (GitHub Pages lets it keep them 10 minutes), so Reload could bring back the old version. Same fix in the pencil test (v0.1.1).
+
 ## 2026-10-24 — Storyboard v0.4.0 (phase 4, step 1: set and camera)
 - Shot Generator (button in the board panel) opens full screen.
 - Set per location, shared by every scene shot there: room width, depth and ceiling height, a door and a window placed on any wall, or an exterior (ground and horizon). Tagged measured / traced / assumed. The sample kitchen is 5.0 m west–east × 4.0 m north–south, 2.6 m ceiling.

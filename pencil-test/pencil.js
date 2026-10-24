@@ -1,6 +1,6 @@
 // Pencil test page (SPEC §9 phase 1): pressure, tilt, palm rejection, latency.
 
-const VERSION = "0.1.0";
+const VERSION = "0.1.1";
 
 const $ = (id) => document.getElementById(id);
 const ink = $("ink");

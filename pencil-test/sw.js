@@ -1,12 +1,14 @@
 // Keeps a copy of the pencil test on the device so it opens with no signal.
 // Change VERSION with every release so the new files replace the old copy.
 
-const VERSION = "0.1.0";
+const VERSION = "0.1.1";
 const CACHE = "pencil-test-" + VERSION;
 const FILES = ["./", "index.html", "style.css", "pencil.js", "manifest.webmanifest", "icon-180.png", "icon-512.png"];
 
 self.addEventListener("install", (e) => {
-  e.waitUntil(caches.open(CACHE).then((c) => c.addAll(FILES)));
+  // "reload" skips Safari's own short-term copies (GitHub Pages lets it keep files 10 minutes),
+  // so a new version is never built from the previous version's files.
+  e.waitUntil(caches.open(CACHE).then((c) => c.addAll(FILES.map((f) => new Request(f, { cache: "reload" })))));
 });
 
 self.addEventListener("activate", (e) => {

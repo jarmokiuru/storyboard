@@ -2,7 +2,7 @@
 // With every release: change VERSION here and in js/version.js, and list any new file below
 // (the list can be rebuilt from the folders: js/, vendor/three/, vendor/models/).
 
-const VERSION = "0.4.0";
+const VERSION = "0.4.1";
 const CACHE = "storyboard-" + VERSION;
 const FILES = [
   "./",
@@ -91,7 +91,9 @@ const FILES = [
 ];
 
 self.addEventListener("install", (e) => {
-  e.waitUntil(caches.open(CACHE).then((c) => c.addAll(FILES)));
+  // "reload" skips Safari's own short-term copies (GitHub Pages lets it keep files 10 minutes),
+  // so a new version is never built from the previous version's files.
+  e.waitUntil(caches.open(CACHE).then((c) => c.addAll(FILES.map((f) => new Request(f, { cache: "reload" })))));
 });
 
 self.addEventListener("activate", (e) => {
