@@ -64,6 +64,7 @@ export function openShotGenerator(p, b, h) {
     stage = new Stage($("sg-canvas"));
     // The panel is only rebuilt when a model finishes loading, never while someone is typing in it.
     stage.things = new Things(stage.scene, () => { stage.request(); readout(); }, () => refreshSelected());
+    stage.things.cameraAt = () => stage.shotCam.position.clone();
     bind();
   }
   $("shotgen").hidden = false;
@@ -156,6 +157,7 @@ function refreshControls() {
 
 function apply() {
   stage.setShot(shot, sensor(), project.ratio);
+  stage.things.refreshLooks();   // figures looking into the lens follow the camera
   refreshControls();
   readout();
 }

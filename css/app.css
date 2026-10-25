@@ -436,3 +436,9 @@ button:active:not(:disabled) { transform: translateY(1px); }
 
 #panel .buttons { gap: 6px; }
 #top-bar .title { flex: 0 1 auto; min-width: 6ch; }
+.sg-joints { display: grid; gap: 8px; }
+.sg-joints summary { cursor: pointer; color: var(--muted); font-size: 13px; padding: 4px 0; }
+.sg-joints[open] { padding-bottom: 4px; }
+#sg-selected select { min-height: 34px; }
+#sg-selected label { display: grid; gap: 3px; font-size: 13px; }
+#sg-selected label > span { color: var(--muted); }

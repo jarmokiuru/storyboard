@@ -173,7 +173,7 @@ Modelled on Storyboarder's Shot Generator [verified in outline: main camera view
 - Add, name (from the scene's `Henkilöt`), colour-tag.
 - Height in cm (scale the skeleton except the head, matching how the library is built [verified from the library README]).
 - Pose presets (authored here): stand, stand weight-shift, walk, sit chair, sit floor, lie back, lie side, kneel, lean on table, arms crossed, point, phone to ear, look over shoulder.
-- Manual posing: select a joint and rotate it with an on-screen ring. No phone/QR posing.
+- Manual posing: select a joint and turn it — built as three sliders (forward, turn, side) per joint in the panel rather than an on-screen ring, matching the slider controls Jarmo asked for elsewhere [as built, v0.7.0]. No phone/QR posing.
 - Head/eye-line: aim the head at a point or at another character.
 
 ### 8.4 Camera

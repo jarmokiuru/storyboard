@@ -1,5 +1,10 @@
 # Changelog
 
+## 2026-10-25 — Storyboard v0.7.0 (phase 4, step 3: poses)
+- Figures take poses: stand, stand with weight on one leg, walk, sit on a chair, sit on the floor, lie on the back, lie on the side, kneel on one knee, lean on a table, arms crossed, point, phone to ear, look over the shoulder. Authored here for every body type and height.
+- Looks at: a figure's head turns to the lens or to another figure, and follows when they move.
+- Pose by hand: choose a joint (back, neck, head, arms, hands, legs, feet) and turn it with Forward / Turn / Side sliders; "Undo all hand posing" goes back to the pose.
+
 ## 2026-10-25 — Storyboard v0.6.0 (INTEGRATION.md items 2–4)
 - Project file format written down in `docs/project-format.md` (format 1), so the chat side can read and write `.storyboard` files.
 - Starter projects: a `.storyboard` file with no drawings (scenes, shots, lenses, characters, sets) opens as a new project; ids, layers and thumbnails may be left out. A file from a newer version is refused with "reload the app".

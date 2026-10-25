@@ -1,7 +1,8 @@
 // Placed furniture and figures: keeps the 3D copies in step with the saved data, and finds what was tapped.
 // Item data (plan metres, degrees, cm):
 //   object: { id, kind: "object", model, x, z, y, rot, w, d, h }
-//   figure: { id, kind: "figure", model, name, x, z, y, rot, height, colour }
+//   figure: { id, kind: "figure", model, name, x, z, y, rot, height, colour, pose, joints, lookAt }
+//     pose: a key of POSES (poses.js); joints: { boneName: [x, y, z] degrees }; lookAt: "camera", a figure id, or empty
 // y: elevation in cm above the floor (missing = 0).
 // rot 0 = facing south (towards the bottom of the plan), + turns clockwise seen from above.
 
@@ -9,6 +10,7 @@ import * as THREE from "three";
 import { byId } from "./catalog.js";
 import { makeObject, makeFigure, setFigureHeight } from "./models.js";
 import { LAYER_PLAN } from "./set.js";
+import { applyPose } from "./poses.js";
 
 const SELECT = 0xf0b429;
 const rad = (d) => (d * Math.PI) / 180;
@@ -22,6 +24,7 @@ export class Things {
     this.nodes = new Map();   // id → { holder, model, size, fig, mark, item }
     this.onChange = onChange;
     this.onLoaded = onLoaded;
+    this.cameraAt = () => null;   // set by the screen: the camera's position, for figures looking into the lens
     this.selectedId = null;
   }
 
@@ -63,12 +66,31 @@ export class Things {
     }
     n.item = item;
     this.place(n);
+    this.refreshLooks(item.id);
     this.onChange();
   }
 
   // The model's own size in metres (null until loaded).
   sizeOf(id) {
     return this.nodes.get(id)?.size ?? null;
+  }
+
+  // Where a figure's eyes should go: the lens, or another figure's eyes.
+  lookPoint(item) {
+    if (!item.lookAt) return null;
+    if (item.lookAt === "camera") return this.cameraAt();
+    const other = this.nodes.get(item.lookAt)?.item;
+    if (!other) return null;
+    return new THREE.Vector3(other.x, (other.y || 0) / 100 + (other.height * 0.93) / 100, other.z);
+  }
+
+  // Re-pose figures whose eyes follow something that moved (another figure, or the camera).
+  refreshLooks(movedId = null) {
+    for (const n of this.nodes.values()) {
+      const it = n.item;
+      if (it.kind !== "figure" || !it.lookAt || !n.fig || it.id === movedId) continue;
+      if (movedId === null || it.lookAt === movedId || it.lookAt === "camera") this.place(n);
+    }
   }
 
   remove(id) {
@@ -87,6 +109,8 @@ export class Things {
     if (!n.size) return;
     if (item.kind === "figure") {
       setFigureHeight(n.fig, item.height);
+      holder.updateMatrixWorld(true);
+      applyPose(n.fig, item, this.lookPoint(item));
     } else {
       // New objects take the model's own size; after that the cm values rule.
       if (item.w == null) Object.assign(item, { w: Math.round(n.size.x * 100), d: Math.round(n.size.z * 100), h: Math.round(n.size.y * 100) });

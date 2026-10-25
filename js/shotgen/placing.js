@@ -3,6 +3,7 @@
 // Figures belong to the board; a new board starts with the figures of the previous board in its scene.
 
 import { OBJECTS, FIGURES, FIGURE_COLOURS, byId } from "./catalog.js";
+import { POSES, POSE_ORDER, JOINTS } from "./poses.js";
 import { openMenu, formDialog } from "../ui.js";
 import { uid, sceneOf, orderedBoards } from "../model.js";
 
@@ -17,6 +18,7 @@ const num = (s, fallback) => {
 // ctx: { project, board, loc, figures, things, shot(), setChanged(), redraw() }
 let ctx = null;
 let selected = null;
+let selectedJoint = null;   // remembered between figures, so posing several hands in a row is quick
 
 export function figuresFor(project, board) {
   if (board.shot3d?.figures) return structuredClone(board.shot3d.figures);
@@ -174,10 +176,20 @@ function showSelected() {
   const isFig = it.kind === "figure";
   const own = ctx.things.sizeOf(it.id);   // the model's own size, for ↺
   const ownCm = (v, fallback) => (own ? Math.round(v * 100) : fallback);
+  const others = ctx.figures.filter((f) => f.id !== it.id);
   box.innerHTML = `
     <h3>${isFig ? "Figure" : "Selected"}</h3>
     ${isFig
-      ? `<label><span>Name</span><input data-f="name" autocomplete="off"></label>${numberRow("Height", "height", 30, 230, 1, "cm", byId(it.model).height)}`
+      ? `<label><span>Name</span><input data-f="name" autocomplete="off"></label>${numberRow("Height", "height", 30, 230, 1, "cm", byId(it.model).height)}
+         <label><span>Pose</span><select data-f="pose">${POSE_ORDER.map((k) => `<option value="${k}">${POSES[k].label}</option>`).join("")}</select></label>
+         <label><span>Looks at</span><select data-f="lookAt"><option value="">Where the pose looks</option><option value="camera">The lens</option>${others.map((f) => `<option value="${f.id}">${f.name}</option>`).join("")}</select></label>
+         <details class="sg-joints"${selectedJoint ? " open" : ""}><summary>Pose by hand</summary>
+           <label><span>Joint</span><select data-f="joint">${JOINTS.map(([b, l]) => `<option value="${b}">${l}</option>`).join("")}</select></label>
+           ${numberRow("Forward", "jx", -120, 120, 5, "°", 0)}
+           ${numberRow("Turn", "jy", -120, 120, 5, "°", 0)}
+           ${numberRow("Side", "jz", -120, 120, 5, "°", 0)}
+           <button data-act="clear-joints">Undo all hand posing</button>
+         </details>`
       : `<p class="muted sg-what"></p>
          ${numberRow("Width", "w", 5, 800, 1, "cm", ownCm(own?.x, it.w))}
          ${numberRow("Depth", "d", 5, 800, 1, "cm", ownCm(own?.z, it.d))}
@@ -189,10 +201,27 @@ function showSelected() {
   if (!isFig) box.querySelector(".sg-what").textContent = byId(it.model)?.label || it.model;
   const name = box.querySelector("[data-f=name]");
   if (name) name.value = it.name;
+  const poseSel = box.querySelector("[data-f=pose]");
+  const lookSel = box.querySelector("[data-f=lookAt]");
+  const jointSel = box.querySelector("[data-f=joint]");
+  if (poseSel) poseSel.value = it.pose || "stand";
+  if (lookSel) lookSel.value = it.lookAt || "";
+  if (jointSel) jointSel.value = selectedJoint || "Head";
+
+  // Hand-posing rows (jx, jy, jz) read and write the chosen joint's three angles.
+  const axis = (key) => ["jx", "jy", "jz"].indexOf(key);
+  const read = (key) => (axis(key) >= 0 ? it.joints?.[jointSel.value]?.[axis(key)] ?? 0 : it[key] ?? 0);
+  const write = (key, value) => {
+    if (axis(key) < 0) return (it[key] = value);
+    it.joints = it.joints || {};
+    const angles = it.joints[jointSel.value] || [0, 0, 0];
+    angles[axis(key)] = value;
+    it.joints[jointSel.value] = angles;
+  };
 
   const rows = [...box.querySelectorAll(".sg-num")];
   const show = (row) => {
-    const v = it[row.dataset.key] ?? 0;
+    const v = read(row.dataset.key);
     row.querySelector("input[type=range]").value = v;
     const text = row.querySelector(".num");
     if (document.activeElement !== text) text.value = v;
@@ -205,41 +234,54 @@ function showSelected() {
     const min = Number(row.dataset.min);
     const max = Number(row.dataset.max);
     if (!Number.isFinite(v)) return;
-    it[key] = Math.round(Math.min(max, Math.max(min, v)) * 10) / 10;
+    write(key, Math.round(Math.min(max, Math.max(min, v)) * 10) / 10);
     show(row);
     ctx.things.put(it);
     if (!isFig) ctx.setChanged();
     ctx.redraw();
   };
-  const stepBy = (row, dir, big) => setValue(row, (it[row.dataset.key] ?? 0) + dir * Number(row.dataset.step) * (big ? 10 : 1));
+  const stepBy = (row, dir, big) => setValue(row, read(row.dataset.key) + dir * Number(row.dataset.step) * (big ? 10 : 1));
 
   for (const row of rows) {
     const range = row.querySelector("input[type=range]");
     const text = row.querySelector(".num");
-    range.oninput = () => { setValue(row, Number(range.value)); text.value = it[row.dataset.key]; };
+    range.oninput = () => { setValue(row, Number(range.value)); text.value = read(row.dataset.key); };
     text.oninput = () => { if (text.value.trim() !== "") setValue(row, num(text.value, NaN)); };
-    text.onchange = () => { text.value = it[row.dataset.key]; };
+    text.onchange = () => { text.value = read(row.dataset.key); };
     text.onkeydown = (e) => {
       if (e.key === "ArrowUp" || e.key === "ArrowDown") {
         e.preventDefault();
         stepBy(row, e.key === "ArrowUp" ? 1 : -1, e.shiftKey);
-        text.value = it[row.dataset.key];
+        text.value = read(row.dataset.key);
       }
       if (e.key === "Enter") text.blur();
     };
-    row.querySelector(".sg-zero").onclick = () => { setValue(row, Number(row.dataset.reset)); text.value = it[row.dataset.key]; };
+    row.querySelector(".sg-zero").onclick = () => { setValue(row, Number(row.dataset.reset)); text.value = read(row.dataset.key); };
     row.addEventListener("wheel", (e) => {
       e.preventDefault();
       stepBy(row, e.deltaY < 0 ? 1 : -1, e.shiftKey);
-      text.value = it[row.dataset.key];
+      text.value = read(row.dataset.key);
     }, { passive: false });
   }
   if (name) name.oninput = () => { it.name = name.value; ctx.things.put(it); ctx.redraw(); };
+  const repose = () => { ctx.things.put(it); ctx.redraw(); };
+  if (poseSel) poseSel.onchange = () => { it.pose = poseSel.value; repose(); };
+  if (lookSel) lookSel.onchange = () => { it.lookAt = lookSel.value; repose(); };
+  if (jointSel) jointSel.onchange = () => {
+    selectedJoint = jointSel.value;
+    rows.filter((r) => axis(r.dataset.key) >= 0).forEach(show);
+  };
+  box.querySelector(".sg-joints")?.addEventListener("toggle", (e) => { if (e.target.open && !selectedJoint) selectedJoint = jointSel.value; });
 
   box.onclick = (e) => {
     const act = e.target.dataset?.act;
     if (act === "delete") deleteSelected();
     if (act === "done") select(null);
+    if (act === "clear-joints") {
+      it.joints = {};
+      rows.filter((r) => axis(r.dataset.key) >= 0).forEach(show);
+      repose();
+    }
   };
 }
 
