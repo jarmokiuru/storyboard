@@ -23,6 +23,7 @@ An offline storyboard app for Jarmo Kiuru, a cinematographer, modelled on Wonder
 - **Storyboarder's main repository has no licence file** — copy its ideas and layout, not its code or data. The model library (`wonderunit/shot-generator-models`) is MIT and may be used.
 - Bump the version number shown in the app with every change Jarmo will test, and add a line to `CHANGELOG.md`.
 - Keep files small and named plainly so a later session can find things.
+- After editing a large file by cutting between markers, check nothing else went: compare its function list with the previous commit (`git show HEAD:<file> | grep -oE '^(async )?function [A-Za-z]+'`) and open every menu in the test browser. (v0.5.3 lost `exportContactSheet` this way; the Export menu was dead until v0.7.1.)
 
 ## Decisions (do not change without asking)
 - 2026-10-23 — Model the tools, functions and UI on Storyboarder as closely as practical.

@@ -772,6 +772,22 @@ async function openShotGen() {
   });
 }
 
+async function exportContactSheet(preset = {}) {
+  const o = await askOptions(project, preset);
+  if (!o) return;
+  project.pdfOptions = o;
+  metaDirty = true;
+  await flush();
+  toast("Making PDF…");
+  try {
+    const blob = await makeContactSheet(project, o);
+    const name = `${safeName(project.title)} ${o.kind === "blank" ? "worksheet" : "storyboard"}.pdf`;
+    await shareFile(blob, name, "application/pdf");
+  } catch (err) {
+    toast("Couldn't make the PDF: " + err.message);
+  }
+}
+
 async function exportShotSheet(kind) {
   await flush();
   const name = `${safeName(project.title)} shot data.${kind}`;

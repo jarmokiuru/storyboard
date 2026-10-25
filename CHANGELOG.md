@@ -1,5 +1,8 @@
 # Changelog
 
+## 2026-10-25 — Storyboard v0.7.1
+- Fix: the Export menu didn't open (since v0.5.3). Adding *Save as new board* had accidentally removed the contact-sheet PDF function, and the menu stopped at that point. Contact sheet PDF and Cmd-P / Cmd-Shift-P work again.
+
 ## 2026-10-25 — Storyboard v0.7.0 (phase 4, step 3: poses)
 - Figures take poses: stand, stand with weight on one leg, walk, sit on a chair, sit on the floor, lie on the back, lie on the side, kneel on one knee, lean on a table, arms crossed, point, phone to ear, look over the shoulder. Authored here for every body type and height.
 - Looks at: a figure's head turns to the lens or to another figure, and follows when they move.
