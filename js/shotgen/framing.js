@@ -6,7 +6,7 @@
 // m = body landmarks from Things.landmarks(): heights in metres, L = head bone to crown.
 export const SIZES = [
   { id: "ECU", title: "Extreme close-up: forehead to mouth", cut: (m) => [m.top - 0.3 * m.L, m.chin + 0.25 * m.L], close: true },
-  { id: "CU", title: "Close-up: head and a little neck", cut: (m) => [m.top + 0.12 * m.L, m.neck - 0.25 * m.L], close: true },
+  { id: "CU", title: "Close-up: the face, crown just trimmed, cut under the chin", cut: (m) => [m.top - 0.08 * m.L, m.chin - 0.2 * m.L], close: true },
   { id: "MCU", title: "Medium close-up: to mid-chest", cut: (m) => [m.top + 0.25 * m.L, m.chest - 0.05], close: true },
   { id: "MS", title: "Medium shot: to the waist", cut: (m) => [m.top + 0.35 * m.L, m.waist - 0.05] },
   { id: "MLS", title: "Medium long shot: to the knees", cut: (m) => [m.top + 0.45 * m.L, m.knees - 0.04] },

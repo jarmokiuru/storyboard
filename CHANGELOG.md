@@ -1,5 +1,8 @@
 # Changelog
 
+## 2026-10-25 — Storyboard v0.9.1
+- CU is tighter: the face only, crown just trimmed, cut under the chin (it was too close to MCU).
+
 ## 2026-10-25 — Storyboard v0.9.0 (phase 4, step 4: shot sizes)
 - Shot-size buttons at the top of the Shot Generator panel: ECU, CU, MCU, MS, MLS, LS, WS, EWS. With a figure chosen (or the only figure on the board), the camera moves to the distance that gives that framing with the current lens, keeping its pan and height and tilting to the frame's middle. Works with any pose, since the cuts follow the figure's own head, chest, waist and knees.
 - The button matching the board's Kuvakoko from the shot list has a dashed outline.
