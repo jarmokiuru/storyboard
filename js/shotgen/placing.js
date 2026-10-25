@@ -182,13 +182,14 @@ function showSelected() {
     ${isFig
       ? `<label><span>Name</span><input data-f="name" autocomplete="off"></label>${numberRow("Height", "height", 30, 230, 1, "cm", byId(it.model).height)}
          <label><span>Pose</span><select data-f="pose">${POSE_ORDER.map((k) => `<option value="${k}">${POSES[k].label}</option>`).join("")}</select></label>
-         <label><span>Looks at</span><select data-f="lookAt"><option value="">Where the pose looks</option><option value="camera">The lens</option>${others.map((f) => `<option value="${f.id}">${f.name}</option>`).join("")}</select></label>
+         <label><span>Looks at</span><select data-f="lookAt"><option value="">Where the pose looks</option><option value="camera">The lens</option>${it.lookAt === "point" ? '<option value="point">Where the head was dragged</option>' : ""}${others.map((f) => `<option value="${f.id}">${f.name}</option>`).join("")}</select></label>
+         <p class="muted sg-unit">Drag the dots on the figure to pose it: hands and feet move the whole limb, the blue dot raises or lowers the hips, the white one turns the head.</p>
          <details class="sg-joints"${selectedJoint ? " open" : ""}><summary>Pose by hand</summary>
            <label><span>Joint</span><select data-f="joint">${JOINTS.map(([b, l]) => `<option value="${b}">${l}</option>`).join("")}</select></label>
            ${numberRow("Forward", "jx", -120, 120, 5, "°", 0)}
            ${numberRow("Turn", "jy", -120, 120, 5, "°", 0)}
            ${numberRow("Side", "jz", -120, 120, 5, "°", 0)}
-           <button data-act="clear-joints">Undo all hand posing</button>
+           <button data-act="clear-joints">Undo all hand posing and dragging</button>
          </details>`
       : `<p class="muted sg-what"></p>
          ${numberRow("Width", "w", 5, 800, 1, "cm", ownCm(own?.x, it.w))}
@@ -265,7 +266,16 @@ function showSelected() {
   }
   if (name) name.oninput = () => { it.name = name.value; ctx.things.put(it); ctx.redraw(); };
   const repose = () => { ctx.things.put(it); ctx.redraw(); };
-  if (poseSel) poseSel.onchange = () => { it.pose = poseSel.value; repose(); };
+  // A new pose starts clean: dragged limbs, hip shift and joint turns belong to the old one.
+  if (poseSel) poseSel.onchange = () => {
+    it.pose = poseSel.value;
+    delete it.manual;
+    delete it.hipsShift;
+    it.joints = {};
+    if (it.lookAt === "point") it.lookAt = "";
+    repose();
+    showSelected();
+  };
   if (lookSel) lookSel.onchange = () => { it.lookAt = lookSel.value; repose(); };
   if (jointSel) jointSel.onchange = () => {
     selectedJoint = jointSel.value;
@@ -279,6 +289,9 @@ function showSelected() {
     if (act === "done") select(null);
     if (act === "clear-joints") {
       it.joints = {};
+      delete it.manual;
+      delete it.hipsShift;
+      if (it.lookAt === "point") it.lookAt = "";
       rows.filter((r) => axis(r.dataset.key) >= 0).forEach(show);
       repose();
     }

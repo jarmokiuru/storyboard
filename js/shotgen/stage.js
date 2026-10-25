@@ -3,6 +3,7 @@
 
 import * as THREE from "three";
 import { buildSet, LAYER_CAMERA_ONLY, LAYER_PLAN } from "./set.js";
+import { LAYER_HANDLES } from "./things.js";
 import { verticalAov, horizontalAov } from "./sensors.js";
 
 const BG = 0x1d1f23;
@@ -29,6 +30,7 @@ export class Stage {
     this.shotCam = new THREE.PerspectiveCamera(40, 2.39, 0.05, 500);
     this.shotCam.rotation.order = "YXZ";
     this.shotCam.layers.enable(LAYER_CAMERA_ONLY);
+    this.shotCam.layers.enable(LAYER_HANDLES);
 
     this.topCam = new THREE.OrthographicCamera(-5, 5, 5, -5, 0.1, 200);
     this.topCam.up.set(0, 0, -1);   // north up
@@ -37,6 +39,7 @@ export class Stage {
 
     this.orbitCam = new THREE.PerspectiveCamera(45, 1, 0.05, 500);
     this.orbitCam.layers.enable(LAYER_PLAN);
+    this.orbitCam.layers.enable(LAYER_HANDLES);
     this.orbit = { r: 9, theta: rad(35), phi: rad(55), target: new THREE.Vector3(0, 1, 0) };
 
     this.body = this.cameraBody();
@@ -211,7 +214,9 @@ export class Stage {
     r.clear();
     this.shotCam.aspect = width / height;
     this.shotCam.updateProjectionMatrix();
+    this.shotCam.layers.disable(LAYER_HANDLES);   // no joint dots on the board
     r.render(this.scene, this.shotCam);
+    this.shotCam.layers.enable(LAYER_HANDLES);
     const out = document.createElement("canvas");
     out.width = width;
     out.height = height;

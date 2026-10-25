@@ -10,7 +10,13 @@ import * as THREE from "three";
 import { byId } from "./catalog.js";
 import { makeObject, makeFigure, setFigureHeight } from "./models.js";
 import { LAYER_PLAN } from "./set.js";
-import { applyPose } from "./poses.js";
+import { applyPose, handlePositions, dragHandle } from "./poses.js";
+
+// Joint dots: seen in the camera and orbit views only (not the plan), and never in Save to board.
+export const LAYER_HANDLES = 3;
+const DOT = new THREE.SphereGeometry(0.035, 16, 12);
+const DOT_COLOURS = { head: 0xffffff, hips: 0x6fb2ff };
+const dotMaterial = (key) => new THREE.MeshBasicMaterial({ color: DOT_COLOURS[key] ?? 0xf0b429, depthTest: false, transparent: true, opacity: 0.95 });
 
 const SELECT = 0xf0b429;
 const rad = (d) => (d * Math.PI) / 180;
@@ -25,6 +31,9 @@ export class Things {
     this.onChange = onChange;
     this.onLoaded = onLoaded;
     this.cameraAt = () => null;   // set by the screen: the camera's position, for figures looking into the lens
+    this.handles = new THREE.Group();
+    this.handles.name = "joint dots";
+    scene.add(this.handles);
     this.selectedId = null;
   }
 
@@ -118,6 +127,7 @@ export class Things {
       model.scale.set(item.w / 100 / n.size.x, item.h / 100 / n.size.y, item.d / 100 / n.size.z);
     }
     this.paintSelection(n);
+    if (item.id === this.selectedId) this.showHandles();
   }
 
   // Seen from above: a footprint outline for objects; a coloured disc with the name's first letter for figures.
@@ -162,6 +172,54 @@ export class Things {
   select(id) {
     this.selectedId = id;
     for (const n of this.nodes.values()) this.paintSelection(n);
+    this.showHandles();
+    this.onChange();
+  }
+
+  // ---------- joint dots (tap-and-drag posing) ----------
+
+  showHandles() {
+    this.handles.clear();
+    const n = this.nodes.get(this.selectedId);
+    if (!n?.fig || n.item.kind !== "figure") return;
+    for (const [key, p] of Object.entries(handlePositions(n.fig))) {
+      const dot = new THREE.Mesh(DOT, dotMaterial(key));
+      dot.position.copy(p);
+      dot.renderOrder = 20;
+      dot.userData.key = key;
+      dot.layers.set(LAYER_HANDLES);
+      this.handles.add(dot);
+    }
+  }
+
+  // The dot nearest a point on screen (px, py in CSS pixels of the canvas), within a fingertip. rect: the view's area.
+  hitHandle(px, py, rect, camera) {
+    let best = null;
+    for (const dot of this.handles.children) {
+      const s = dot.position.clone().project(camera);
+      if (s.z > 1) continue;   // behind the camera
+      const x = rect.x + ((s.x + 1) / 2) * rect.w;
+      const y = rect.y + ((1 - s.y) / 2) * rect.h;
+      const dist = Math.hypot(x - px, y - py);
+      if (dist < 28 && (!best || dist < best.dist)) best = { key: dot.userData.key, dist };
+    }
+    return best?.key ?? null;
+  }
+
+  // What a drag needs to remember from its start.
+  dragStart(key) {
+    const n = this.nodes.get(this.selectedId);
+    const at = this.handles.children.find((d) => d.userData.key === key)?.position.clone();
+    const forward = new THREE.Vector3(0, 0, 1).applyQuaternion(n.holder.getWorldQuaternion(new THREE.Quaternion()));
+    return { at, forward, hipsShift: n.item.hipsShift ?? 0 };
+  }
+
+  dragTo(key, target, start) {
+    const n = this.nodes.get(this.selectedId);
+    if (!n?.fig) return;
+    dragHandle(n.fig, n.item, key, target, start);
+    this.place(n);
+    this.refreshLooks(n.item.id);
     this.onChange();
   }
 

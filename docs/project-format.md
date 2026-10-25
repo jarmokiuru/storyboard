@@ -77,6 +77,13 @@ Entries may be stored or deflated. A file with only `project.json` is valid (a s
 
 `shot3d.camera`: `{ x, z (m), height (cm), pan, tilt, roll (°), focal (mm) }`.
 `shot3d.figures[]`: `{ id, kind: "figure", model, name, x, z (m), y (cm elevation), rot (°), height (cm), colour ("#rrggbb") }`.
+Optional pose fields on a figure (all may be left out; the app fills defaults):
+- `pose`: preset id from `POSE_ORDER` in `js/shotgen/poses.js` (`stand`, `walk`, `sitChair`, …). Default `stand`.
+- `lookAt`: `""` = where the pose looks, `"camera"` = the lens, another figure's `id`, or `"point"` = `lookPoint`.
+- `lookPoint`: `{ x, y, z }` in metres (world), set by dragging the head.
+- `joints`: `{ <bone>: [forward, turn, side] }` in degrees, from the *Pose by hand* sliders (bone names as in `JOINTS`).
+- `manual`: `{ <bone>: [x, y, z, w] }` local bone rotations (quaternions) left by dragging hands, feet, elbows and knees.
+- `hipsShift`: centimetres the hips are raised (+) or lowered (−) with the feet kept planted.
 
 ### `locations[]`
 

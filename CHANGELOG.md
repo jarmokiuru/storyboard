@@ -1,5 +1,11 @@
 # Changelog
 
+## 2026-10-25 — Storyboard v0.8.0 (tap-and-drag posing)
+- Tap a figure in the camera or orbit view and dots appear on it. Drag a hand or foot and the whole limb follows; drag an elbow or knee to bend it; drag the blue hip dot down to crouch or sit lower with the feet kept on the floor; drag the white head dot to turn the eye-line (Looks at then reads "Where the head was dragged").
+- The dots never appear in the saved board.
+- Choosing a new pose starts clean. "Undo all hand posing and dragging" removes slider turns and dragged changes alike.
+- `docs/project-format.md` now lists the figure pose fields (`pose`, `lookAt`, `lookPoint`, `joints`, `manual`, `hipsShift`).
+
 ## 2026-10-25 — Storyboard v0.7.1
 - Fix: the Export menu didn't open (since v0.5.3). Adding *Save as new board* had accidentally removed the contact-sheet PDF function, and the menu stopped at that point. Contact sheet PDF and Cmd-P / Cmd-Shift-P work again.
 

@@ -1,6 +1,7 @@
 // Shot Generator screen: opens full screen from a board, edits the set, furniture, figures and camera, and saves
 // the camera view to the board's reference layer. Poses and shot-size presets come in later steps.
 
+import * as THREE from "three";
 import { Stage } from "./stage.js";
 import { defaultRoom } from "./set.js";
 import { SENSORS, PRIMES, DEFAULT_SENSOR, sensorById } from "./sensors.js";
@@ -305,6 +306,13 @@ function down(e) {
     drag.start = p;
     return;
   }
+  // A joint dot on the chosen figure: drag it to pose (camera and orbit views).
+  const cam = viewCamera(rect);
+  const dot = stage.things.hitHandle(p.x, p.y, rect, cam);
+  if (dot) {
+    drag = { mode: "joint", id: e.pointerId, key: dot, rect, cam, pose: stage.things.dragStart(dot) };
+    return;
+  }
   if (stage.view === "camera") {
     drag = { mode: "look", id: e.pointerId, x: p.x, y: p.y, pan: shot.pan, tilt: shot.tilt, rect, tap: true };
   } else {
@@ -350,6 +358,18 @@ function move(e) {
     moveSelected(g.x + drag.dx, g.z + drag.dz);
     return;
   }
+  if (drag.mode === "joint") {
+    // The dot moves in a plane facing the camera, through where it started.
+    const r = drag.rect;
+    const ndc = new THREE.Vector2(((p.x - r.x) / r.w) * 2 - 1, 1 - ((p.y - r.y) / r.h) * 2);
+    const ray = new THREE.Raycaster();
+    ray.setFromCamera(ndc, drag.cam);
+    const normal = drag.cam.getWorldDirection(new THREE.Vector3());
+    const plane = new THREE.Plane().setFromNormalAndCoplanarPoint(normal, drag.pose.at);
+    const target = ray.ray.intersectPlane(plane, new THREE.Vector3());
+    if (target) stage.things.dragTo(drag.key, target, drag.pose);
+    return;
+  }
   if (drag.mode === "look" && drag.tap) return;   // could still be a tap
   if (drag.mode === "look") {
     // The picture follows the finger (Jarmo's choice): drag right = camera pans left, drag up = camera tilts down.
@@ -381,6 +401,7 @@ function move(e) {
 function up(e) {
   touches.delete(e.pointerId);
   if (!drag) return;
+  if (drag.mode === "joint" && drag.id === e.pointerId) refreshSelected();
   if (drag.mode === "swap") {
     if (drag.tap && drag.id === e.pointerId) setView(stage.view === "camera" ? "top" : "camera");
   } else if (drag.tap && drag.id === e.pointerId) {
@@ -402,6 +423,15 @@ function zoom(k, from = { span: stage.top.span, r: stage.orbit.r, focal: shot.fo
     stage.orbit.r = clamp(from.r * k, 1.5, 60);
     stage.request();
   }
+}
+
+// The camera a view is drawn with, set up for the given rectangle (so screen points map correctly).
+function viewCamera(rect) {
+  if (stage.view === "orbit") {
+    stage.aimOrbit(rect.w / rect.h);
+    return stage.orbitCam;
+  }
+  return stage.shotCam;
 }
 
 // A tap without dragging picks what's under it (or clears the choice when it hits nothing).

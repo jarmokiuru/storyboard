@@ -196,12 +196,30 @@ export function applyPose(fig, item, look) {
     rotateIn(B.Head, body, euler(pose.head.map((d) => d * 0.6)));
   }
 
+  // Dragged hips: up or down, feet stay where they were (cm, at the figure's own scale).
+  if (item.hipsShift) {
+    const feet = ["LeftFoot", "RightFoot"].map((n) => B[n].getWorldPosition(new THREE.Vector3()));
+    const p = hips.getWorldPosition(new THREE.Vector3());
+    p.y += (item.hipsShift / 100) * scale;
+    hips.position.copy(hips.parent.worldToLocal(p));
+    hips.updateMatrixWorld(true);
+    solveLimb(B, "footL", feet[0]);
+    solveLimb(B, "footR", feet[1]);
+  }
+
+  // Dragged limbs: the bone turns found while dragging, kept as they were left (relative to the parent bone).
+  for (const [name, q] of Object.entries(item.manual || {})) {
+    if (B[name]) B[name].quaternion.fromArray(q);
+  }
+  fig.node.updateMatrixWorld(true);
+
   // Hand posing: extra turns per joint, in the body's frame (degrees: forward/back, turn, side).
   for (const [name, angles] of Object.entries(item.joints || {})) {
     if (B[name] && angles.some(Boolean)) rotateIn(B[name], body, euler(angles));
   }
 
   // Eye-line: turn neck and head towards a point, within what a neck can do.
+  if (!look && item.lookAt === "point" && item.lookPoint) look = new THREE.Vector3(...item.lookPoint);
   if (look) {
     const head = B.Head.getWorldPosition(new THREE.Vector3());
     const local = look.clone().sub(head).applyQuaternion(body.clone().invert());
@@ -211,4 +229,91 @@ export function applyPose(fig, item, look) {
     rotateIn(B.Head, body, euler([pitch * 0.6, yaw * 0.6, 0]));
   }
   fig.node.updateMatrixWorld(true);
+}
+
+// ---------- dragging joints (tap-and-drag posing) ----------
+
+// The dots shown on a chosen figure: what each one moves.
+//   end: the bone the dot sits on; chain: [upper, lower, end] for a hand or foot (the limb follows),
+//   or [upper, lower] for an elbow or knee (the upper bone swings).
+export const HANDLES = {
+  head: { bone: "Head", kind: "head" },
+  hips: { bone: "Hips", kind: "hips" },
+  handL: { bone: "LeftHand", chain: ["LeftArm", "LeftForeArm", "LeftHand"] },
+  handR: { bone: "RightHand", chain: ["RightArm", "RightForeArm", "RightHand"] },
+  elbowL: { bone: "LeftForeArm", chain: ["LeftArm", "LeftForeArm"] },
+  elbowR: { bone: "RightForeArm", chain: ["RightArm", "RightForeArm"] },
+  footL: { bone: "LeftFoot", chain: ["LeftUpLeg", "LeftLeg", "LeftFoot"] },
+  footR: { bone: "RightFoot", chain: ["RightUpLeg", "RightLeg", "RightFoot"] },
+  kneeL: { bone: "LeftLeg", chain: ["LeftUpLeg", "LeftLeg"] },
+  kneeR: { bone: "RightLeg", chain: ["RightUpLeg", "RightLeg"] },
+};
+
+const wpos = (bone) => bone.getWorldPosition(new THREE.Vector3());
+
+// Where each dot sits now, in the set (world space).
+export function handlePositions(fig) {
+  if (!fig.bones) return {};
+  const out = {};
+  for (const [key, h] of Object.entries(HANDLES)) {
+    const b = fig.bones[h.bone];
+    if (!b) continue;
+    const p = wpos(b);
+    // The head dot sits in the middle of the head rather than at the neck.
+    if (key === "head" && fig.bones.Head.children[0]) p.lerp(wpos(fig.bones.Head.children[0]), 0.5);
+    out[key] = p;
+  }
+  return out;
+}
+
+// Two-bone reach: put the end of upper→lower→end on target, bending in the plane the limb already bends in.
+function reach(upper, lower, end, target) {
+  const A = wpos(upper);
+  const Bp = wpos(lower);
+  const C = wpos(end);
+  const a = A.distanceTo(Bp);
+  const b = Bp.distanceTo(C);
+  const toT = target.clone().sub(A);
+  const d = Math.min(Math.max(toT.length(), Math.abs(a - b) + 1e-3), a + b - 1e-4);
+  const dir = toT.normalize();
+  const pole = Bp.clone().sub(A);
+  pole.sub(dir.clone().multiplyScalar(pole.dot(dir)));
+  if (pole.lengthSq() < 1e-8) pole.set(0, 0, 1).sub(dir.clone().multiplyScalar(dir.z));
+  pole.normalize();
+  const cosA = (a * a + d * d - b * b) / (2 * a * d);
+  const sinA = Math.sqrt(Math.max(0, 1 - cosA * cosA));
+  const elbow = A.clone().add(dir.clone().multiplyScalar(a * cosA)).add(pole.multiplyScalar(a * sinA));
+  aim(upper, lower, elbow.sub(A));
+  aim(lower, end, target.clone().sub(wpos(lower)));
+}
+
+function solveLimb(B, key, target) {
+  const [u, l, e] = HANDLES[key].chain;
+  reach(B[u], B[l], B[e], target);
+}
+
+// Move one dot to a world point. Changes the figure's data (item) so the pose can be rebuilt later:
+// limbs → item.manual (bone turns), hips → item.hipsShift (cm), head → item.lookAt "point" + item.lookPoint.
+export function dragHandle(fig, item, key, target, start) {
+  const h = HANDLES[key];
+  const B = fig.bones;
+  if (h.kind === "hips") {
+    const scale = fig.node.getWorldScale(new THREE.Vector3()).y;
+    const shift = (start.hipsShift ?? 0) + ((target.y - start.at.y) / scale) * 100;
+    item.hipsShift = Math.round(Math.max(-90, Math.min(25, shift)));
+    // The legs are solved again from the feet, so drop any leg turns kept from earlier drags.
+    for (const n of ["LeftUpLeg", "LeftLeg", "LeftFoot", "RightUpLeg", "RightLeg", "RightFoot"]) delete item.manual?.[n];
+    return;
+  }
+  if (h.kind === "head") {
+    // Look past the dot: the head's start, a metre ahead, plus how far the dot moved (doubled, for reach).
+    const p = start.at.clone().add(start.forward).add(target.clone().sub(start.at).multiplyScalar(2));
+    item.lookAt = "point";
+    item.lookPoint = p.toArray().map((n) => Math.round(n * 1000) / 1000);
+    return;
+  }
+  if (h.chain.length === 3) reach(B[h.chain[0]], B[h.chain[1]], B[h.chain[2]], target);
+  else aim(B[h.chain[0]], B[h.chain[1]], target.clone().sub(wpos(B[h.chain[0]])));
+  item.manual = item.manual || {};
+  for (const n of h.chain) item.manual[n] = B[n].quaternion.toArray().map((x) => Math.round(x * 1e5) / 1e5);
 }
