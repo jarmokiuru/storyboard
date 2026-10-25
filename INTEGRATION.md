@@ -59,6 +59,28 @@ Show the moves as a list to confirm, then move the boards with all their drawing
 ### 5. Location files (with phase 5, floor plans)
 One file per location (proposed name `<Location>.location.json`): room, openings, furniture, north angle, tag, plus optional GPS and a plan image with two calibration points. The app imports and exports these. The chat-side floor-plan step writes them, and the same plan becomes the Shot Designer background.
 
+## Chat side: a set and a Shot Designer plan from photos + measurements
+Worked through on 2026-10-25 with a test photo (a 12 × 18 ft living room). This step runs in Jarmo's normal chat (the floor-plan / shot-planning side), not in the app: it needs the photos, his measurements and the production's folders. Claude there may use its code tool to write the files; the app only reads the result.
+
+**Input:** one or more photos of the space, plus measurements — at least the room's width and depth (or one wall and the floor area) and the ceiling height. Measurements usually come as plain text beside the photos.
+
+**Reading the photos:**
+- Room size from the measurements; the photos give the shape, where the door(s) and window(s) are, and where the main furniture stands.
+- When labels and photo disagree, say so plainly and state which reading was used (the test photo labelled both left–right lines as 12 ft and 18 ft; the room was read as 12 ft wide × 18 ft deep from the receding side walls).
+- Put the main window wall at north unless the real compass direction is known (`room.north` holds the true bearing later, for sun work).
+- Everything estimated from a photo is tagged **assumed**; from a scaled drawing **traced**; from a tape **measured** (SPEC §8.6 decision).
+- Furniture becomes the closest library shape from `js/shotgen/catalog.js`, resized to real cm (`w`, `d`, `h`, elevation `y`). No library shape for flat things (rugs) or ceiling fixtures: leave them out and mention them in the chat.
+
+**Output 1 — the set for the Shot Generator:** a starter `.storyboard` file (format in `docs/project-format.md`) with the location (`room`, `objects`, `tag`), one scene that uses it, and one board whose `shot3d.camera` matches the photo's viewpoint (position, height, lens) as a starting frame. Opens as a new project, or merges into the production's project when it carries that project's `id`. Once item 5 is built, the same location can travel as its own location file.
+
+**Output 2 — the plan for Shot Designer** [Jarmo's rules, 2026-10-25]:
+- **Blank:** walls, window(s) and door(s) with swing only. **No text, labels, scale bar, north arrow or furniture** — Shot Designer adds its own elements on top.
+- **Cropped to the space:** the picture's edges are the room's inside faces, wall to wall, with walls drawn inside the edge. No empty area around it.
+- **High resolution:** 800 px per metre (a 3.66 × 5.49 m room → 2928 × 4392 px PNG), with the density stored in the file.
+- **Calibrating:** because the picture is exactly wall to wall, its width *is* the room width (and its height the depth). Give those two numbers in the chat, together with anything else worth knowing (tag, assumptions, what was left out). Extra notes go in the chat or a separate file, never on the plan.
+
+The test run's scripts (room reading → starter file, blank plan) were small Python files using only the standard library; any equivalent is fine as long as the outputs follow the rules above.
+
 ## Storage and naming [proposed]
 - The project file lives on Jarmo's Drive in the production's camera folder, e.g. `KUVAUS/Storyboard/<Project>.storyboard`. Board PNGs and the shot data sheet go beside it when exported.
 - Board image names stay `<Kohtaus #>-<board>.png` (e.g. `12-3b.png`). The Daily Package matches pictures to shots by these names. Don't change the pattern without noting it here.
