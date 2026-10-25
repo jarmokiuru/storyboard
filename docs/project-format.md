@@ -11,6 +11,7 @@ Markers: **[required]** must be present in a starter file; everything else is op
 | `project.json` | `{ "app": "storyboard", "format": 1, "project": { … } }` — UTF-8 JSON |
 | `layers/<board id>/<layer>.png` | One per drawn layer. `<layer>` is `reference`, `fill`, `pencil`, `ink` or `notes`. Full board size: 2048 px wide × 2048 / aspect ratio high, transparent where empty. |
 | `thumbs/<board id>.jpg` | 320 px wide, on white. Optional; the app makes it when the board is next saved. |
+| `plans/<location id>.png` or `.jpg` | A location's floor-plan picture (see `locations[].plan`). At most 4096 px on its long side. |
 
 Entries may be stored or deflated. A file with only `project.json` is valid (a starter file).
 
@@ -95,7 +96,21 @@ Optional pose fields on a figure (all may be left out; the app fills defaults):
 | `room.door` | `{ wall: "n"|"s"|"e"|"w", offset (m from the wall's centre, + = east or south), width, height (m) }` or null |
 | `room.window` | `{ wall, offset, width, height, sill (m) }` or null |
 | `objects[]` | Furniture: `{ id, kind: "object", model, x, z (m), y (cm elevation), rot (°), w, d, h (cm) }`. `model` ids are in `js/shotgen/catalog.js`, e.g. `table-sit-rectangle`. |
+| `gps` | Optional, carried as given (e.g. `{ lat, lon }`); not used by the app yet |
+| `plan` | Optional floor-plan picture, lined up with the room: `{ type ("image/png" or "image/jpeg"), w, h (picture px), a, b ([x, y] px: the north wall's inside NW and NE corners, y down), dist (m between a and b), x, z (m: where the picture's centre lies on the floor), rot (° the picture is turned, + clockwise seen from above) }`. The picture itself is `plans/<location id>.*` in the zip. Scale = `dist` ÷ the a–b distance in px. A merge never brings a plan picture in; open the location file for that. |
 | `id` | Optional in starter files |
+
+## Location files (`<Location>.location.json`)
+
+One set on its own (INTEGRATION.md item 5), opened and saved from the Shot Generator's *Set…* menu. UTF-8 JSON:
+
+```
+{ "app": "storyboard-location", "format": 1,
+  "location": { "name", "tag", "room", "objects", "gps"?, "plan"? },
+  "planImage": "data:image/png;base64,…" }
+```
+
+Fields as in `locations[]` above (`id`s optional). `planImage` is present only with `plan`. Opening one replaces the open set's room, openings, north, tag, GPS and plan picture; furniture is replaced only if Jarmo picks the file's (asked when both have furniture). The set keeps its own name and its link to the scenes. A newer `format` is refused with the reload message.
 
 ## Starter files
 

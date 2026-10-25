@@ -1,4 +1,5 @@
-// The .storyboard project file: a zip of project.json + one PNG per drawn layer + thumbnails. SPEC §2.
+// The .storyboard project file: a zip of project.json + one PNG per drawn layer + thumbnails + floor-plan
+// pictures. SPEC §2.
 
 import * as db from "./db.js";
 import { LAYERS, uid, newScene, newBoard, defaultRoom } from "./model.js";
@@ -19,8 +20,15 @@ export async function exportProject(project) {
     const thumb = await db.getThumb(b.id);
     if (thumb) entries.push({ name: `thumbs/${b.id}.jpg`, data: thumb });
   }
+  for (const l of project.locations || []) {
+    if (!l.plan) continue;
+    const plan = await db.getPlan(project.id, l.id);
+    if (plan) entries.push({ name: planPath(l), data: plan });
+  }
   return makeZip(entries);
 }
+
+const planPath = (l) => `plans/${l.id}.${l.plan.type === "image/png" ? "png" : "jpg"}`;
 
 export async function readProjectFile(file) {
   const files = await readZip(file);
@@ -114,6 +122,12 @@ export async function installProject({ project, files }, mode) {
     }
     const t = files.get(`thumbs/${src}.jpg`);
     if (t) await db.putThumb(b.id, new Blob([t], { type: "image/jpeg" }));
+  }
+  for (const l of p.locations || []) {
+    if (!l.plan) continue;
+    const f = files.get(planPath(l));
+    if (f) await db.putPlan(p.id, l.id, new Blob([f], { type: l.plan.type }));
+    else delete l.plan;
   }
   await db.putProject(p);
   return p;

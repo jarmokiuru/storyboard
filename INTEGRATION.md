@@ -57,6 +57,8 @@ old Kohtaus #,old Kuva #,new Kohtaus #,new Kuva #
 Show the moves as a list to confirm, then move the boards with all their drawings and 3D data. Apply all moves at once, so swapped numbers don't collide. Numbers that don't exist are listed and skipped.
 
 ### 5. Location files (with phase 5, floor plans)
+**Done in v0.10.0 (2026-10-25)** — Shot Generator → *Set…* → *Save location file* / *Open location file…* (`js/location-file.js`; format in `docs/project-format.md`, "Location files"). The plan picture travels inside the file as a data address (`planImage`), with its two corner points. Opening one replaces room, openings, north, tag and plan; furniture only if Jarmo picks the file's. Also in v0.10.0: *Plan for Shot Designer (PNG)* from the app, following the rules below.
+
 One file per location (proposed name `<Location>.location.json`): room, openings, furniture, north angle, tag, plus optional GPS and a plan image with two calibration points. The app imports and exports these. The chat-side floor-plan step writes them, and the same plan becomes the Shot Designer background.
 
 ## Chat side: a set and a Shot Designer plan from photos + measurements

@@ -1,5 +1,12 @@
 # Changelog
 
+## 2026-10-25 — Storyboard v0.10.0 (phase 5: floor plans)
+- Shot Generator → *Set…* is now a menu: room size, door and window; plan picture; plan for Shot Designer; location files.
+- **Plan picture:** pick a picture of the plan, tap the inside corners at both ends of the north wall, type that wall's length. The picture is scaled, turned and lined up with the room, and shows under the top and orbit views (never in the saved frame). Zoom 2× / 4× and drag the markers to be exact. *Line up the plan again* and *Remove plan picture* are there too.
+- **Plan for Shot Designer (PNG):** blank walls, windows and doors with their swing, cropped wall to wall, 800 px per metre stored in the file. Size and tag are in the file name, nothing is written on the plan.
+- **Location files:** save a set (room, furniture, plan picture) as `<Location>.location.json`, and open one into another project's set. You choose whose furniture to keep.
+- Project files now carry the plan pictures (`plans/` in the zip).
+
 ## 2026-10-25 — Storyboard v0.9.1
 - CU is tighter: the face only, crown just trimmed, cut under the chin (it was too close to MCU).
 

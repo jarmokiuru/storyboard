@@ -45,6 +45,13 @@ export const deleteLayer = (boardId, name) => run("layers", "readwrite", (s) => 
 export const getThumb = (boardId) => run("thumbs", "readonly", (s) => s.get(boardId));
 export const putThumb = (boardId, blob) => run("thumbs", "readwrite", (s) => s.put(blob, boardId));
 
+// A location's floor-plan picture, kept in the layers store under its project and location
+// (copies of a project get new ids, so they never share or delete each other's plans).
+const planKey = (projectId, locationId) => `plan:${projectId}/${locationId}`;
+export const getPlan = (projectId, locationId) => run("layers", "readonly", (s) => s.get(planKey(projectId, locationId)));
+export const putPlan = (projectId, locationId, blob) => run("layers", "readwrite", (s) => s.put(blob, planKey(projectId, locationId)));
+export const deletePlan = (projectId, locationId) => run("layers", "readwrite", (s) => s.delete(planKey(projectId, locationId)));
+
 export async function deleteBoardData(boardId) {
   await run("layers", "readwrite", (s) => {
     for (const name of LAYERS) s.delete(layerKey(boardId, name));
@@ -54,5 +61,6 @@ export async function deleteBoardData(boardId) {
 
 export async function deleteProject(project) {
   for (const b of project.boards) await deleteBoardData(b.id);
+  for (const l of project.locations || []) if (l.plan) await deletePlan(project.id, l.id);
   await run("projects", "readwrite", (s) => s.delete(project.id));
 }

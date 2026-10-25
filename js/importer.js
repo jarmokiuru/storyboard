@@ -343,7 +343,8 @@ export async function mergeStarter(project, incoming) {
   for (const l of incoming.locations || []) {
     const mine = project.locations.find((x) => x.name.toLowerCase() === l.name.toLowerCase());
     if (!mine) {
-      extra.fills.push(() => project.locations.push({ ...structuredClone(l), id: l.id && !project.locations.some((x) => x.id === l.id) ? l.id : uid() }));
+      // A plan picture inside the file isn't brought in by a merge (like drawings); open the location file for it.
+      extra.fills.push(() => project.locations.push({ ...structuredClone(l), plan: undefined, id: l.id && !project.locations.some((x) => x.id === l.id) ? l.id : uid() }));
       continue;
     }
     if (!sameRoom(mine.room, l.room)) {

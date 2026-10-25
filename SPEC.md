@@ -193,8 +193,8 @@ Modelled on Storyboarder's Shot Generator [verified in outline: main camera view
 - Target: 2 characters + 10 objects stays responsive on the 2017 Mac (aim ≥ 20 frames per second while dragging).
 
 ### 8.6 Floor plan out (for Shot Designer)
-Export the top view as PNG and PDF: walls, openings, furniture outlines, a scale bar, one wall labelled with its real length (for calibrating in Shot Designer), and a north arrow. Each plan carries a tag — **measured**, **traced** or **assumed** — printed on the export, so a guess is never mistaken for a measurement [decision].
-[verify at build: whether Shot Designer has a background scale setting is unknown; the labelled wall length is the fallback.]
+A blank PNG of the room for Shot Designer to draw on [Jarmo's rules, 2026-10-25, replacing the earlier scale-bar / label / north-arrow version]: walls, windows and doors with their swing only — no text, labels, scale bar, north arrow or furniture. Cropped wall to wall (walls drawn inside the edge), so the picture's width is the room's width and its height the depth, for calibrating in Shot Designer. 800 px per metre, stored in the PNG (`pHYs`); very large rooms drop to fewer px/m to stay within iPad Safari's canvas limit, and the app says so. The tag (**measured** / **traced** / **assumed**) and the size go in the file name, e.g. `KEITTIÖ plan 5.00 x 4.00 m (assumed).png`, never on the plan [as built, v0.10.0].
+Plan picture in: Set… → Add plan picture; tap the north wall's two inside corners and type its length. That gives the scale, the turn and the position in one step. The picture shows under the top and orbit views only, never in the saved frame.
 
 ## 9. Build order
 
@@ -225,7 +225,7 @@ Use the files in `samples/`: a three-scene breakdown, a shot list and the same s
 - [ ] Horizontal angle of view on screen matches a hand calculation from the verified sensor width.
 - [ ] Project file exported on iPad opens on the Mac with identical boards.
 - [ ] On the 2017 Mac, the kitchen scene with both figures stays responsive.
-- [ ] Floor plan export shows scale bar, labelled wall length, north arrow and the plan's tag.
+- [ ] Floor plan export is blank (walls, windows, doors with swing), cropped wall to wall at 800 px/m, with size and tag in the file name.
 
 ## 11. Out of scope for now
 - Animatics: board timing, playback, editing-timeline exports [decision: not needed at this point].

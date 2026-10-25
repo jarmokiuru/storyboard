@@ -5,7 +5,11 @@ import * as THREE from "three";
 import { Stage } from "./stage.js";
 import { defaultRoom } from "./set.js";
 import { SENSORS, PRIMES, DEFAULT_SENSOR, sensorById } from "./sensors.js";
-import { formDialog, toast } from "../ui.js";
+import { formDialog, toast, openMenu, choose, confirmBox, pickFile, shareFile } from "../ui.js";
+import * as db from "../db.js";
+import { blankPlan } from "../plan-export.js";
+import { loadPlanPicture, calibratePlan } from "../plan-calibrate.js";
+import { locationFile, readLocationFile } from "../location-file.js";
 import { parseLens } from "../lens.js";
 import { Things } from "./things.js";
 import { SIZES, frameSize, sizeFromKuvakoko } from "./framing.js";
@@ -73,16 +77,27 @@ export function openShotGenerator(p, b, h) {
   $("sg-title").textContent = `${loc.name} · Board ${h.label}`;
   buildControls();
   stage.setSet(loc.room);
+  showPlan();
   figures = figuresFor(project, board);
+  placeAll();
+  apply();
+  stage.resize();
+  hooks.changed();
+}
+
+// Furniture from the set and figures from the board, into the 3D scene.
+function placeAll() {
   startPlacing({
     project, board, loc, figures, things: stage.things,
     shot: () => shot,
     setChanged: () => hooks.changed(),
     redraw: () => { stage.request(); readout(); },
   });
-  apply();
-  stage.resize();
-  hooks.changed();
+}
+
+function showPlan() {
+  if (!loc.plan) return stage.setPlan(null);
+  db.getPlan(project.id, loc.id).then((blob) => stage.setPlan(loc.plan, blob));
 }
 
 function close() {
@@ -217,6 +232,117 @@ const num = (s, fallback) => {
   return isNaN(n) ? fallback : n;
 };
 
+// ---------- the set: size, plan picture, Shot Designer plan, location files (SPEC §8.1, §8.6) ----------
+
+function setMenu(anchor) {
+  openMenu(anchor, [
+    { label: "Room size, door and window…", action: setDialog },
+    { type: "sep" },
+    { label: loc.plan ? "Replace plan picture…" : "Add plan picture…", action: addPlanPicture },
+    ...(loc.plan ? [
+      { label: "Line up the plan again…", action: realignPlan },
+      { label: "Remove plan picture", action: removePlan },
+    ] : []),
+    { type: "sep" },
+    { label: "Plan for Shot Designer (PNG)", action: exportPlan },
+    { label: "Save location file", action: saveLocation },
+    { label: "Open location file…", action: openLocation },
+  ]);
+}
+
+async function addPlanPicture() {
+  const file = await pickFile("image/*");
+  if (!file) return;
+  const pic = await loadPlanPicture(file);
+  if (!pic) return;
+  const res = await calibratePlan(pic, loc.room);
+  if (!res) return;
+  await db.putPlan(project.id, loc.id, pic.blob);
+  usePlan(res);
+}
+
+async function realignPlan() {
+  const blob = await db.getPlan(project.id, loc.id);
+  if (!blob) return toast("The plan picture is missing on this device. Add it again.");
+  const res = await calibratePlan({ blob, w: loc.plan.w, h: loc.plan.h, type: loc.plan.type }, loc.room, loc.plan);
+  if (res) usePlan(res);
+}
+
+function usePlan({ plan, w, d }) {
+  if (w) {
+    loc.room = { ...loc.room, w, d };
+    stage.setSet(loc.room);
+  }
+  loc.plan = plan;
+  showPlan();
+  setView("top");
+  hooks.changed();
+  toast("Plan lined up with the north wall. Check the door and window against it (Set… → Room size).", 4500);
+}
+
+async function removePlan() {
+  if (!(await confirmBox("Remove the plan picture from this set? The room and furniture stay.", { ok: "Remove", danger: true }))) return;
+  await db.deletePlan(project.id, loc.id);
+  delete loc.plan;
+  showPlan();
+  hooks.changed();
+}
+
+const fileName = (s) => String(s).replace(/[\\/:*?"<>|]+/g, "-").trim() || "Set";
+const metres = (v) => Number(v).toFixed(2);
+
+// Jarmo's rules: blank, cropped wall to wall, 800 px/m. The size and tag go in the file name, never on the plan.
+async function exportPlan() {
+  const r = loc.room;
+  if (r.exterior) return toast("An exterior has no walls to draw. Shot Designer plans are for rooms.");
+  const out = await blankPlan(r);
+  const name = `${fileName(loc.name)} plan ${metres(r.w)} x ${metres(r.d)} m (${loc.tag}).png`;
+  const note = out.ppm < 800 ? ` The room is large, so it's ${out.ppm} px per metre instead of 800.` : "";
+  toast(`Picture width = ${metres(r.w)} m (west–east), height = ${metres(r.d)} m (north–south).${note}`, 6000);
+  await shareFile(out.blob, name, "image/png");
+}
+
+async function saveLocation() {
+  await shareFile(await locationFile(project, loc), `${fileName(loc.name)}.location.json`, "application/json");
+}
+
+// Brings in a set from a location file: room, openings, north, tag and plan replace this set's; furniture is
+// Jarmo's choice when both have some. The set keeps its name and its link to the scenes.
+async function openLocation() {
+  const file = await pickFile(".json,application/json");
+  if (!file) return;
+  let got;
+  try {
+    got = await readLocationFile(file);
+  } catch (err) {
+    return toast(err.message, 5000);
+  }
+  const { location, planBlob } = got;
+  let furniture = "file";
+  if (loc.objects?.length && location.objects.length) {
+    const pieces = (n) => (n === 1 ? "1 piece" : `${n} pieces`);
+    furniture = await choose(`The file has ${pieces(location.objects.length)} of furniture; this set has ${pieces(loc.objects.length)}. Which to keep?`, [
+      { label: "Keep mine", value: "keep" },
+      { label: "Use the file's", value: "file" },
+    ]);
+    if (!furniture) return;
+  } else if (!location.objects.length) furniture = "keep";
+  loc.tag = location.tag;
+  loc.room = location.room;
+  if (location.gps) loc.gps = location.gps;
+  if (furniture === "file") loc.objects = location.objects;
+  if (planBlob) {
+    await db.putPlan(project.id, loc.id, planBlob);
+    loc.plan = location.plan;
+  }
+  stage.setSet(loc.room);
+  showPlan();
+  placeAll();
+  apply();
+  hooks.changed();
+  toast(`Set loaded from "${location.name}".`);
+}
+
 async function setDialog() {
   const r = loc.room;
   const walls = [["", "None"], ["n", "North"], ["s", "South"], ["e", "East"], ["w", "West"]];
@@ -260,7 +386,7 @@ function bind() {
   $("sg-back").onclick = close;
   $("sg-save").onclick = save;
   $("sg-save-new").onclick = saveAsNew;
-  $("sg-set").onclick = setDialog;
+  $("sg-set").onclick = (e) => setMenu(e.currentTarget);
   $("sg-add").onclick = (e) => addMenu(e.currentTarget);
   $("sg-reset").onclick = () => { shot = defaultShot(loc.room); apply(); };
   // ↺ next to a slider: just that value back to its start (height 150 cm, angles 0°).

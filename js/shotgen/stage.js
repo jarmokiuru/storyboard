@@ -5,6 +5,7 @@ import * as THREE from "three";
 import { buildSet, LAYER_CAMERA_ONLY, LAYER_PLAN } from "./set.js";
 import { LAYER_HANDLES } from "./things.js";
 import { verticalAov, horizontalAov } from "./sensors.js";
+import { planScale } from "../plan-calibrate.js";
 
 const BG = 0x1d1f23;
 const SKY = 0xcfd3d8;
@@ -62,6 +63,43 @@ export class Stage {
     const span = room.exterior ? 16 : Math.max(room.w, room.d) + 2;
     this.top = { cx: 0, cz: room.exterior ? 2 : 0, span };
     this.orbit.r = room.exterior ? 14 : Math.max(room.w, room.d) * 1.6;
+    this.request();
+  }
+
+  // The location's floor-plan picture on the floor, seen in the top and orbit views only (never in the saved frame).
+  async setPlan(plan, blob) {
+    const token = (this.planToken = (this.planToken || 0) + 1);
+    if (this.planMesh) {
+      this.scene.remove(this.planMesh);
+      this.planMesh.geometry.dispose();
+      this.planMesh.material.map?.dispose();
+      this.planMesh.material.dispose();
+      this.planMesh = null;
+      this.request();
+    }
+    if (!plan || !blob) return;
+    const url = URL.createObjectURL(blob);
+    let map;
+    try {
+      map = await new THREE.TextureLoader().loadAsync(url);
+    } finally {
+      URL.revokeObjectURL(url);
+    }
+    if (token !== this.planToken) return map.dispose();   // a newer plan arrived meanwhile
+    map.colorSpace = THREE.SRGBColorSpace;
+    map.anisotropy = this.renderer.capabilities.getMaxAnisotropy();
+    const s = planScale(plan);
+    const mesh = new THREE.Mesh(
+      new THREE.PlaneGeometry(plan.w * s, plan.h * s),
+      new THREE.MeshBasicMaterial({ map, transparent: true, opacity: 0.85, depthWrite: false }),
+    );
+    // Lying flat with the picture's top to the north, then turned and moved as the corners were lined up.
+    mesh.geometry.rotateX(-Math.PI / 2);
+    mesh.rotation.y = rad(plan.rot);
+    mesh.position.set(plan.x, 0.004, plan.z);
+    mesh.layers.set(LAYER_PLAN);
+    this.planMesh = mesh;
+    this.scene.add(mesh);
     this.request();
   }
 
