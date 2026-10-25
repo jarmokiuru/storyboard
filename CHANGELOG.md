@@ -1,5 +1,11 @@
 # Changelog
 
+## 2026-10-25 — Storyboard v0.9.0 (phase 4, step 4: shot sizes)
+- Shot-size buttons at the top of the Shot Generator panel: ECU, CU, MCU, MS, MLS, LS, WS, EWS. With a figure chosen (or the only figure on the board), the camera moves to the distance that gives that framing with the current lens, keeping its pan and height and tilting to the frame's middle. Works with any pose, since the cuts follow the figure's own head, chest, waist and knees.
+- The button matching the board's Kuvakoko from the shot list has a dashed outline.
+- If the framing needs the camera outside the room, a note says so (choose a wider lens or turn the camera).
+- "Show speed" at the bottom of the panel puts frames per second in the readout while something moves (for the 2017 Mac check; the target is 20 or more).
+
 ## 2026-10-25 — Storyboard v0.8.0 (tap-and-drag posing)
 - Tap a figure in the camera or orbit view and dots appear on it. Drag a hand or foot and the whole limb follows; drag an elbow or knee to bend it; drag the blue hip dot down to crouch or sit lower with the feet kept on the floor; drag the white head dot to turn the eye-line (Looks at then reads "Where the head was dragged").
 - The dots never appear in the saved board.

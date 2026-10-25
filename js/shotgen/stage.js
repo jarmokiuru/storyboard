@@ -140,6 +140,14 @@ export class Stage {
   }
 
   render() {
+    // Frames per second while something keeps changing: frames closer than 1 s apart count as one movement (so a very slow machine still shows a low number).
+    const now = performance.now();
+    if (this.lastFrame && now - this.lastFrame < 1000) {
+      (this.gaps ||= []).push(now - this.lastFrame);
+      if (this.gaps.length > 30) this.gaps.shift();
+      if (this.gaps.length >= 5) this.fps = Math.round(1000 / (this.gaps.reduce((a, b) => a + b, 0) / this.gaps.length));
+    } else this.gaps = [];
+    this.lastFrame = now;
     const r = this.renderer;
     const { W, H, main, inset } = this.layout();
     r.setScissorTest(true);
@@ -149,6 +157,7 @@ export class Stage {
     this.draw(this.view === "camera" ? this.topCam : this.shotCam, inset, SKY);
     this.insetRect = inset;
     this.mainRect = main;
+    this.onFrame?.();
   }
 
   draw(cam, rect, clear) {

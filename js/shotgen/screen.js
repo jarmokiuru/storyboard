@@ -1,5 +1,5 @@
 // Shot Generator screen: opens full screen from a board, edits the set, furniture, figures and camera, and saves
-// the camera view to the board's reference layer. Poses and shot-size presets come in later steps.
+// the camera view to the board's reference layer.
 
 import * as THREE from "three";
 import { Stage } from "./stage.js";
@@ -8,6 +8,7 @@ import { SENSORS, PRIMES, DEFAULT_SENSOR, sensorById } from "./sensors.js";
 import { formDialog, toast } from "../ui.js";
 import { parseLens } from "../lens.js";
 import { Things } from "./things.js";
+import { SIZES, frameSize, sizeFromKuvakoko } from "./framing.js";
 import { figuresFor, startPlacing, addMenu, select, selectedItem, moveSelected, deleteSelected, subjectDistance, refreshSelected } from "./placing.js";
 import { uid, sceneOf, BOARD_WIDTH, boardHeight, heading } from "../model.js";
 
@@ -104,6 +105,7 @@ async function saveAsNew() {
   board = made.board;
   hooks.label = made.label;
   zoomRange = parseLens(board.lens)?.range ?? null;
+  markListedSize();
   $("sg-title").textContent = `${loc.name} · Board ${made.label}`;
   toast(`Saved as new board ${made.label}.${made.note ? " " + made.note + "." : ""} Keep framing, or go back to the board.`, 4000);
 }
@@ -143,7 +145,39 @@ function buildControls() {
     row.dataset.unit = unit;
     sliders.append(row);
   }
+  const sizes = $("sg-sizes");
+  sizes.innerHTML = "";
+  for (const s of SIZES) {
+    const b = document.createElement("button");
+    b.textContent = s.id;
+    b.dataset.size = s.id;
+    b.title = s.title;
+    sizes.append(b);
+  }
+  markListedSize();
   refreshControls();
+}
+
+// The board's Kuvakoko from the shot list gets a dashed outline, so the matching button is easy to find.
+function markListedSize() {
+  const want = sizeFromKuvakoko(board.kuvakoko);
+  for (const b of $("sg-sizes").children) b.classList.toggle("listed", b.dataset.size === want);
+  $("sg-listed").textContent = board.kuvakoko ? `(shot list: ${board.kuvakoko})` : "";
+}
+
+// Frame the chosen figure (or the only figure on the board) at a shot size, keeping the pan.
+function frameAt(sizeId) {
+  let it = selectedItem();
+  if (it?.kind !== "figure") it = figures.length === 1 ? figures[0] : null;
+  if (!it) return toast(figures.length ? "Tap a figure first, then the shot size." : "Add a figure first (Add → Figure), then choose the shot size.");
+  const next = frameSize(sizeId, stage.things.landmarks(it.id), shot, stage.shotCam.fov);
+  if (!next) return toast("That figure is still loading. Try again in a moment.");
+  Object.assign(shot, next);
+  apply();
+  const r = loc.room;
+  if (!r.exterior && (Math.abs(shot.x) > r.w / 2 || Math.abs(shot.z) > r.d / 2)) {
+    toast(`At ${shot.focal} mm the camera has to stand outside the room for a ${sizeId}. Choose a wider lens, or turn the camera.`, 5000);
+  }
 }
 
 function refreshControls() {
@@ -168,7 +202,8 @@ function readout() {
   const s = sensor();
   const d = subjectDistance();
   const subject = (d == null ? "" : ` · subject ${d.toFixed(2)} m`) + (zoomRange ? ` · zoom ${zoomRange[0]}–${zoomRange[1]} mm` : "");
-  $("sg-readout").textContent = `${shot.focal} mm · ${stage.hfov.toFixed(1)}° horizontal · height ${Math.round(shot.height)} cm · tilt ${shot.tilt.toFixed(1)}°${subject} · ${s.camera} ${s.mode}`;
+  const speed = $("sg-speed").checked ? ` · ${stage.fps ? stage.fps + " fps" : "move to measure"}` : "";
+  $("sg-readout").textContent = `${shot.focal} mm · ${stage.hfov.toFixed(1)}° horizontal · height ${Math.round(shot.height)} cm · tilt ${shot.tilt.toFixed(1)}°${subject} · ${s.camera} ${s.mode}${speed}`;
 }
 
 function setView(v) {
@@ -246,6 +281,17 @@ function bind() {
     const f = Number(e.target.dataset?.focal);
     if (f) { shot.focal = f; apply(); }
   };
+  $("sg-sizes").onclick = (e) => {
+    const id = e.target.dataset?.size;
+    if (id) frameAt(id);
+  };
+  // Speed readout for checking the 2017 Mac (SPEC §8.5: aim for 20+ frames per second while dragging).
+  try { $("sg-speed").checked = localStorage.getItem("sg-speed") === "1"; } catch { /* private mode */ }
+  $("sg-speed").onchange = (e) => {
+    try { localStorage.setItem("sg-speed", e.target.checked ? "1" : "0"); } catch { /* private mode */ }
+    readout();
+  };
+  stage.onFrame = () => { if ($("sg-speed").checked) readout(); };
   $("sg-focal").onchange = (e) => {
     const f = num(e.target.value, shot.focal);
     if (f >= 4 && f <= 1200) { shot.focal = f; apply(); }

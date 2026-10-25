@@ -385,6 +385,10 @@ dialog label span { color: var(--muted); }
 #sg-panel label > span { color: var(--muted); }
 #sg-lenses { display: grid; grid-template-columns: repeat(5, 1fr); gap: 4px; margin: 6px 0; }
 #sg-lenses button { padding: 0; min-height: 36px; font-size: 13px; }
+#sg-sizes { display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; margin: 6px 0 0; }
+#sg-sizes button { padding: 0; min-height: 36px; font-size: 13px; }
+#sg-sizes button.listed { outline: 1px dashed var(--muted); outline-offset: -4px; }
+#sg-panel label.sg-check { display: flex; gap: 8px; align-items: center; }
 .sg-free { grid-template-columns: auto 1fr !important; align-items: center; }
 #sg-sliders { display: grid; gap: 10px; }
 .sg-slider { display: grid; grid-template-columns: 52px 1fr 58px 30px; gap: 6px; align-items: center; font-size: 13px; }
@@ -397,6 +401,7 @@ dialog label span { color: var(--muted); }
   #shotgen { grid-template-columns: minmax(0, 1fr); grid-template-rows: auto minmax(0, 1fr) auto; grid-template-areas: "bar" "stage" "panel"; }
   #sg-panel { max-height: 42vh; border-left: 0; border-top: 1px solid var(--line); padding-bottom: max(12px, env(safe-area-inset-bottom)); }
   #sg-lenses { grid-template-columns: repeat(7, 1fr); }
+  #sg-sizes { grid-template-columns: repeat(8, 1fr); }
 }
 
 #sg-selected { display: grid; gap: 8px; padding: 10px; border-radius: var(--radius); background: var(--raised); }

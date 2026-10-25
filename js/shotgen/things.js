@@ -207,6 +207,26 @@ export class Things {
   }
 
   // What a drag needs to remember from its start.
+  // Heights (world metres) of the body landmarks shot sizes cut at, as the figure is posed now.
+  landmarks(id) {
+    const n = this.nodes.get(id);
+    const B = n?.fig?.bones;
+    if (!B?.Head) return null;
+    n.holder.updateMatrixWorld(true);
+    const at = (name) => B[name]?.getWorldPosition(new THREE.Vector3());
+    const head = at("Head");
+    const top = B.Head.children[0] ? B.Head.children[0].getWorldPosition(new THREE.Vector3()) : head.clone().setY(head.y + 0.2);
+    const eyes = B.LeftEye && B.RightEye ? at("LeftEye").lerp(at("RightEye"), 0.5) : head.clone().lerp(top, 0.5);
+    const L = Math.max(0.1, top.y - head.y);   // head bone to crown, about two-thirds of the head
+    const knees = (at("LeftLeg").y + at("RightLeg").y) / 2;
+    const floor = Math.min(...["LeftFoot", "RightFoot", "LeftToeBase", "RightToeBase"].filter((b) => B[b]).map((b) => at(b).y)) - 0.06;
+    return {
+      top: top.y, eyes: eyes.y, chin: head.y - 0.3 * L, neck: at("Neck").y, chest: at("Spine2").y,
+      waist: at("Spine").y, knees, floor, L,
+      head: { x: eyes.x, z: eyes.z }, body: { x: at("Hips").x, z: at("Hips").z },
+    };
+  }
+
   dragStart(key) {
     const n = this.nodes.get(this.selectedId);
     const at = this.handles.children.find((d) => d.userData.key === key)?.position.clone();
