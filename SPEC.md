@@ -189,6 +189,7 @@ Modelled on Storyboarder's Shot Generator [verified in outline: main camera view
 
 ### 8.5 Rendering and performance
 - Flat grey "clay" look with a simple key + fill; optional single sun direction.
+- **Sun / key light** [Jarmo, 2026-10-28, future addition, not scheduled]: a sidebar control in the Shot Generator to change the light's direction and shading. Minimum: one 0–360° direction dial for the sun, elevation fixed at about 45°, with shadows so the direction reads. The direction is measured on the plan (0 = from north) and uses the location's north angle once that is set. Later, possibly: elevation, softness/strength, and setting the sun from date, time and GPS (the chat side's `psa-200-rule-check` already computes sun position).
 - Render only on change (no constant animation loop). Cap pixel ratio on the Mac.
 - Target: 2 characters + 10 objects stays responsive on the 2017 Mac (aim ≥ 20 frames per second while dragging).
 
