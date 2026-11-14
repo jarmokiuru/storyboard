@@ -5,7 +5,8 @@
 //
 // Shot Designer reads pictures up to roughly 1400–1500 px at a fixed rate (100 px/m opens at true size —
 // tested 2026-11-15: its 5 m car matched the 5 m room wall to wall) and shrinks bigger ones. So the default is
-// 150 px/m, a little larger than true size as Jarmo prefers ("I'd rather scale down than up"), kept under
+// 125 px/m (Jarmo, 2026-11-15; first 150), a little larger than true size as he prefers ("I'd rather scale
+// down than up"), kept under
 // 1400 px on the long side; "sharp" is 800 px/m for scaling by hand.
 
 import { crc32 } from "./zip.js";
@@ -13,7 +14,7 @@ import { crc32 } from "./zip.js";
 const WALL = 0.08;     // metres: drawn wall thickness, inside the edge
 const LINE = 0.012;    // metres: thin lines (door leaf and swing, window)
 const MAX_PIXELS = 16e6;   // iPad Safari refuses bigger canvases
-export const SHOT_DESIGNER = { ppm: 150, maxSide: 1400 };
+export const SHOT_DESIGNER = { ppm: 125, maxSide: 1400 };
 export const SHARP = { ppm: 800, maxSide: Infinity };
 
 // room: { w, d, door, window } in metres (plan axes: x west → east, z north → south; north up).

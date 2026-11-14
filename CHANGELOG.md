@@ -1,5 +1,9 @@
 # Changelog
 
+## 2026-11-15 — Storyboard v0.10.2
+- *Plan for Shot Designer* is now 125 px per metre (was 150): it opens at 1.25 × true size; scale it to 80 % to match Shot Designer's props.
+- Fix: the Shot Generator's picture could come out stretched wide (seen on the iPad). The 3D view now re-measures itself whenever its area on screen changes, and checks again before every frame.
+
 ## 2026-11-15 — Storyboard v0.10.1
 - *Plan for Shot Designer* is now 150 px per metre (was 800). Shot Designer reads small pictures at 100 px/m = true size and shrinks big ones, so the 800 px/m plans opened far too big. 150 px/m opens at 1.5 × true size, with room around the objects; scale it to 67 % to match Shot Designer's props. The density is in the file name, and rooms over about 9 m get fewer px/m so Shot Designer never shrinks them.
 - New *Plan for Shot Designer, sharp (800 px/m)* for crisp lines when you scale by hand.

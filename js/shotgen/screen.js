@@ -293,7 +293,7 @@ const fileName = (s) => String(s).replace(/[\\/:*?"<>|]+/g, "-").trim() || "Set"
 const metres = (v) => Number(v).toFixed(2);
 
 // Jarmo's rules: blank, cropped wall to wall. The size, density and tag go in the file name, never on the plan.
-// The default opens in Shot Designer at 1.5 × true size (scale it down to fit its props); sharp is for scaling by hand.
+// The default opens in Shot Designer at 1.25 × true size (scale it down to fit its props); sharp is for scaling by hand.
 async function exportPlan(kind) {
   const r = loc.room;
   if (r.exterior) return toast("An exterior has no walls to draw. Shot Designer plans are for rooms.");

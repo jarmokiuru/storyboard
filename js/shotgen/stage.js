@@ -49,6 +49,9 @@ export class Stage {
     this.view = "camera";
     this.ratio = 2.39;
     this.frame = null;
+    // The canvas can change size without the window changing (the panel settling after opening, Focus,
+    // the on-screen keyboard): re-measure whenever it does, or the picture is drawn stretched.
+    if (window.ResizeObserver) new ResizeObserver(() => this.resize()).observe(canvas);
   }
 
   // ---------- content ----------
@@ -157,8 +160,7 @@ export class Stage {
   }
 
   resize() {
-    const r = this.canvas.getBoundingClientRect();
-    this.renderer.setSize(Math.max(1, r.width), Math.max(1, r.height), false);
+    this.renderer.setSize(Math.max(1, this.canvas.clientWidth), Math.max(1, this.canvas.clientHeight), false);
     this.request();
   }
 
@@ -178,6 +180,11 @@ export class Stage {
   }
 
   render() {
+    // Last guard against a stretched picture: the drawing surface must match the canvas's size on screen.
+    const size = this.renderer.getSize(new THREE.Vector2());
+    if (Math.round(size.x) !== this.canvas.clientWidth || Math.round(size.y) !== this.canvas.clientHeight) {
+      this.renderer.setSize(Math.max(1, this.canvas.clientWidth), Math.max(1, this.canvas.clientHeight), false);
+    }
     // Frames per second while something keeps changing: frames closer than 1 s apart count as one movement (so a very slow machine still shows a low number).
     const now = performance.now();
     if (this.lastFrame && now - this.lastFrame < 1000) {
