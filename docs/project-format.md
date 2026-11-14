@@ -73,11 +73,12 @@ Entries may be stored or deflated. A file with only `project.json` is valid (a s
 | `id` | Optional in starter files |
 | `horizon` | Horizon guide, 0 = top … 1 = bottom (default 0.5) |
 | `layers` | `{ reference, fill, pencil, ink, notes }`, each `{ visible, opacity (0–1), hasData }`. Leave out of starter files. |
-| `shot3d` | `{ locationId, camera, figures, sun }` — the Shot Generator's state for this board (below) |
+| `shot3d` | `{ locationId, camera, figures, sun, light }` — the Shot Generator's state for this board (below) |
 | `camera` | Copy of `shot3d.camera`'s `height`, `tilt`, `pan`, `focal`, for the shot data sheet |
 
 `shot3d.camera`: `{ x, z (m), height (cm), pan, tilt, roll (°), focal (mm) }`.
-`shot3d.sun`: degrees on the plan the sun comes **from** (0 = north, 90 = east, + clockwise), always 45° up. Optional; a board without one takes the nearest earlier board's in the same scene, else 125.
+`shot3d.sun`: degrees on the plan the sun comes **from** (0 = north, 90 = east, + clockwise). Optional; a board without one takes the nearest earlier board's light in the same scene, else 125.
+`shot3d.light`: `{ height (° above the horizon, 5–90, default 45), sun, fill, outside (0–100 %, defaults 50, 50, 83) }` — sun strength, ambient fill, and the brightness of the sky seen through windows or behind an exterior. Optional; missing values take the defaults.
 `shot3d.figures[]`: `{ id, kind: "figure", model, name, x, z (m), y (cm elevation), rot (°), height (cm), colour ("#rrggbb") }`.
 Optional pose fields on a figure (all may be left out; the app fills defaults):
 - `pose`: preset id from `POSE_ORDER` in `js/shotgen/poses.js` (`stand`, `walk`, `sitChair`, …). Default `stand`.

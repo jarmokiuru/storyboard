@@ -9,6 +9,8 @@ import { planScale } from "../plan-calibrate.js";
 
 const BG = 0x1d1f23;
 const SKY = 0xcfd3d8;
+// Starting light (as built in v0.11.0): sun from the south-east, 45° up; strengths in % of the original look.
+export const LIGHT = { dir: 125, height: 45, sun: 50, fill: 50, outside: 83 };
 const FRUSTUM_LENGTH = 3.5;   // metres drawn in the top view
 
 export const rad = (d) => (d * Math.PI) / 180;
@@ -25,8 +27,9 @@ export class Stage {
     this.renderer.shadowMap.type = mac ? THREE.PCFShadowMap : THREE.PCFSoftShadowMap;
 
     this.scene = new THREE.Scene();
-    this.scene.add(new THREE.HemisphereLight(0xffffff, 0x6a6a6a, 1.15));
-    // The sun (SPEC §8.5): one direction on the plan, 45° up, casting shadows from figures and furniture.
+    this.fill = new THREE.HemisphereLight(0xffffff, 0x6a6a6a, 1.15);
+    this.scene.add(this.fill);
+    // The sun (SPEC §8.5): a direction on the plan and a height, casting shadows from figures and furniture.
     // Walls don't cast, so the direction always reads on the people, inside or out.
     this.sun = new THREE.DirectionalLight(0xffffff, 1.9);
     this.sun.castShadow = true;
@@ -36,7 +39,8 @@ export class Stage {
     this.scene.add(this.sun, this.sun.target);
     this.sunArrow = new THREE.Group();
     this.scene.add(this.sunArrow);
-    this.sunDir = 125;
+    this.light = { ...LIGHT };
+    this.sky = new THREE.Color(SKY);
 
     this.shotCam = new THREE.PerspectiveCamera(40, 2.39, 0.05, 500);
     this.shotCam.rotation.order = "YXZ";
@@ -74,26 +78,34 @@ export class Stage {
     this.set = buildSet(room);
     this.scene.add(this.set);
     this.room = room;
-    this.setSun(this.sunDir);
+    this.setLight(this.light);
     const span = room.exterior ? 16 : Math.max(room.w, room.d) + 2;
     this.top = { cx: 0, cz: room.exterior ? 2 : 0, span };
     this.orbit.r = room.exterior ? 14 : Math.max(room.w, room.d) * 1.6;
     this.request();
   }
 
-  // dir: where the sun comes from, in degrees on the plan (0 = from north, 90 = from east), always 45° up.
-  setSun(dir) {
-    this.sunDir = dir;
+  // light: { dir (° on the plan the sun comes from, 0 = north), height (° above the horizon),
+  //          sun, fill, outside (0–100 %: sun strength, ambient fill, brightness of the sky outside) }.
+  setLight(light) {
+    this.light = { ...LIGHT, ...light };
+    const { dir, height, sun, fill, outside } = this.light;
+    this.sun.intensity = (sun / 50) * 1.9;
+    this.fill.intensity = (fill / 50) * 1.15;
+    this.sky.setHSL(0.58, 0.08, outside / 100, THREE.SRGBColorSpace);
     const a = rad(dir);
+    const up = rad(Math.min(90, Math.max(1, height)));
     const flat = { x: Math.sin(a), z: -Math.cos(a) };   // from the room towards the sun
     const room = this.room || { w: 8, d: 8, exterior: true };
     const reach = room.exterior ? 12 : Math.max(room.w, room.d) / 2 + 2;   // what the shadows must cover
-    const far = reach * 3;
-    this.sun.position.set(flat.x * far * Math.SQRT1_2, far * Math.SQRT1_2, flat.z * far * Math.SQRT1_2);
+    // Low sun throws long shadows: let the shadow box reach further along the ground (up to 4×).
+    const reachLong = reach * Math.min(4, 1 / Math.max(0.25, Math.sin(up)));
+    const far = reachLong * 3;
+    this.sun.position.set(flat.x * far * Math.cos(up), far * Math.sin(up), flat.z * far * Math.cos(up));
     this.sun.target.position.set(0, 0, 0);
     const cam = this.sun.shadow.camera;
-    cam.left = cam.bottom = -reach;
-    cam.right = cam.top = reach;
+    cam.left = cam.bottom = -reachLong;
+    cam.right = cam.top = reachLong;
     cam.near = 0.5;
     cam.far = far * 2;
     cam.updateProjectionMatrix();
@@ -236,8 +248,11 @@ export class Stage {
     r.setScissorTest(true);
     this.draw(null, { x: 0, y: 0, w: W, h: H }, BG);
     const mainCam = this.view === "camera" ? this.shotCam : this.view === "top" ? this.topCam : this.orbitCam;
-    this.draw(mainCam, main, SKY);
-    this.draw(this.view === "camera" ? this.topCam : this.shotCam, inset, SKY);
+    // The outside brightness is what the lens sees; the plan and orbit views keep their usual light grey.
+    const behind = (cam) => (cam === this.shotCam ? this.sky : SKY);
+    this.draw(mainCam, main, behind(mainCam));
+    const insetCam = this.view === "camera" ? this.topCam : this.shotCam;
+    this.draw(insetCam, inset, behind(insetCam));
     this.insetRect = inset;
     this.mainRect = main;
     this.onFrame?.();
@@ -302,7 +317,7 @@ export class Stage {
     r.setSize(width, height, false);
     r.setScissorTest(false);
     r.setViewport(0, 0, width, height);
-    r.setClearColor(SKY);
+    r.setClearColor(this.sky);
     r.clear();
     this.shotCam.aspect = width / height;
     this.shotCam.updateProjectionMatrix();

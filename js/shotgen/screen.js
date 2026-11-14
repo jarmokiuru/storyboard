@@ -2,7 +2,7 @@
 // the camera view to the board's reference layer.
 
 import * as THREE from "three";
-import { Stage } from "./stage.js";
+import { Stage, LIGHT } from "./stage.js";
 import { defaultRoom } from "./set.js";
 import { SENSORS, PRIMES, DEFAULT_SENSOR, sensorById } from "./sensors.js";
 import { formDialog, toast, openMenu, choose, confirmBox, pickFile, shareFile } from "../ui.js";
@@ -26,7 +26,7 @@ const SLIDERS = [
 
 let stage = null;
 let project, board, loc, shot, hooks, figures;
-let sun = 125;   // where the sun comes from on the plan, degrees (0 = north), 45° up
+let light = { ...LIGHT };   // sun direction and height, sun strength, fill, outside brightness (stage.js LIGHT)
 let zoomRange = null;   // when the board's Lens/Focal is a zoom, e.g. [24, 70]
 let drag = null;
 const touches = new Map();
@@ -80,8 +80,8 @@ export function openShotGenerator(p, b, h) {
   stage.setSet(loc.room);
   showPlan();
   figures = figuresFor(project, board);
-  sun = sunFor(project, board);
-  showSun();
+  light = lightFor(project, board);
+  showLight();
   placeAll();
   apply();
   stage.resize();
@@ -109,21 +109,52 @@ function close() {
 }
 
 const picture = () => stage.snapshot(BOARD_WIDTH, boardHeight(project.ratio));
-const shot3d = () => ({ locationId: loc.id, camera: { ...shot }, figures: structuredClone(figures), sun });
+// Saved as shot3d.sun (direction, as in v0.11.0) plus shot3d.light (the rest).
+const shot3d = () => {
+  const { dir, ...rest } = light;
+  return { locationId: loc.id, camera: { ...shot }, figures: structuredClone(figures), sun: dir, light: rest };
+};
 
-// The board's own sun, else the one on the nearest earlier board of the same scene (light carries through a scene).
-function sunFor(p, b) {
-  if (b.shot3d?.sun != null) return b.shot3d.sun;
+const readLight = (b) => (b.shot3d?.sun != null ? { ...LIGHT, ...(b.shot3d.light || {}), dir: b.shot3d.sun } : null);
+
+// The board's own light, else the nearest earlier board's in the same scene (light carries through a scene).
+function lightFor(p, b) {
+  if (readLight(b)) return readLight(b);
   const scene = orderedBoards(p).filter((x) => x.sceneId === b.sceneId);
-  for (let i = scene.indexOf(b) - 1; i >= 0; i--) if (scene[i].shot3d?.sun != null) return scene[i].shot3d.sun;
-  return 125;
+  for (let i = scene.indexOf(b) - 1; i >= 0; i--) if (readLight(scene[i])) return readLight(scene[i]);
+  return { ...LIGHT };
 }
 
+// [key, label, min, max, step, title] — modelled on Storyboarder's World panel (ambient intensity; directional
+// intensity, rotation and tilt; background brightness), in the units a DP would use.
+const LIGHT_ROWS = [
+  ["dir", "Sun", 0, 360, 5, "Where the sun comes from on the plan: 0° = from north, 90° = from east"],
+  ["height", "Height", 5, 90, 1, "How high the sun is above the horizon: low = long shadows, 90° = straight overhead"],
+  ["sun", "Strength", 0, 100, 1, "How bright the sun is"],
+  ["fill", "Fill", 0, 100, 1, "Ambient light: how bright the shadow side is"],
+  ["outside", "Outside", 0, 100, 1, "Brightness of the sky outside — what you see through the window or behind an exterior"],
+];
 const COMPASS = ["N", "NE", "E", "SE", "S", "SW", "W", "NW"];
-function showSun() {
-  stage.setSun(sun);
-  $("sg-sun").value = sun;
-  $("sg-sun-out").textContent = `${sun}° ${COMPASS[Math.round(sun / 45) % 8]}`;
+const lightText = (key, v) => (key === "dir" ? `${v}° ${COMPASS[Math.round(v / 45) % 8]}` : key === "height" ? `${v}°` : `${v}%`);
+
+function buildLight() {
+  const box = $("sg-light");
+  box.querySelectorAll(".sg-slider").forEach((r) => r.remove());
+  for (const [key, label, min, max, step, title] of LIGHT_ROWS) {
+    const row = document.createElement("div");
+    row.className = "sg-slider";
+    row.title = title;
+    row.innerHTML = `<span>${label}</span><input type="range" min="${min}" max="${max}" step="${step}" data-light="${key}" aria-label="${title}"><output data-light-out="${key}"></output><button class="sg-zero" data-light-reset="${key}" title="Back to ${lightText(key, LIGHT[key])}">↺</button>`;
+    box.append(row);
+  }
+}
+
+function showLight() {
+  stage.setLight(light);
+  for (const [key] of LIGHT_ROWS) {
+    $("sg-light").querySelector(`[data-light="${key}"]`).value = light[key];
+    $("sg-light").querySelector(`[data-light-out="${key}"]`).textContent = lightText(key, light[key]);
+  }
 }
 
 function save() {
@@ -428,13 +459,28 @@ function bind() {
     const f = Number(e.target.dataset?.focal);
     if (f) { shot.focal = f; apply(); }
   };
-  $("sg-sun").oninput = (e) => { sun = Number(e.target.value) % 360; showSun(); };
-  $("sg-sun-reset").onclick = () => { sun = 125; showSun(); };
-  $("sg-sun").addEventListener("wheel", (e) => {
-    e.preventDefault();
-    sun = (((sun + (e.deltaY < 0 ? 5 : -5) * (e.shiftKey ? 3 : 1)) % 360) + 360) % 360;
-    showSun();
+  buildLight();
+  const setLightValue = (key, v) => {
+    const [, , min, max] = LIGHT_ROWS.find((r) => r[0] === key);
+    light[key] = key === "dir" ? ((v % 360) + 360) % 360 : Math.min(max, Math.max(min, v));
+    showLight();
+  };
+  $("sg-light").addEventListener("input", (e) => {
+    const key = e.target.dataset?.light;
+    if (key) setLightValue(key, Number(e.target.value));
   });
+  $("sg-light").addEventListener("click", (e) => {
+    const key = e.target.dataset?.lightReset;
+    if (key) setLightValue(key, LIGHT[key]);
+  });
+  // Scrolling over a light row steps it (Shift = ×5).
+  $("sg-light").addEventListener("wheel", (e) => {
+    const input = e.target.closest?.(".sg-slider")?.querySelector("input");
+    if (!input) return;
+    e.preventDefault();
+    const key = input.dataset.light;
+    setLightValue(key, light[key] + Number(input.step) * (e.shiftKey ? 5 : 1) * (e.deltaY < 0 ? 1 : -1));
+  }, { passive: false });
   $("sg-sizes").onclick = (e) => {
     const id = e.target.dataset?.size;
     if (id) frameAt(id);

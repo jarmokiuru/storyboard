@@ -1,5 +1,10 @@
 # Changelog
 
+## 2026-11-15 — Storyboard v0.12.0 (light)
+- The Shot Generator's *Sun* row is now a *Light* section, modelled on Storyboarder's World panel: **Sun** (direction), **Height** (5–90° above the horizon; low sun = long shadows), **Strength** (sun brightness), **Fill** (ambient light: how bright the shadow side is) and **Outside** (brightness of the sky seen through windows or behind an exterior). Each has ↺ to go back.
+- *Outside* changes only what the lens sees; the top and orbit views keep their usual background.
+- All light settings are saved with the board and carried to new boards in the same scene, like the sun direction.
+
 ## 2026-11-15 — Storyboard v0.11.0 (sun direction)
 - Shot Generator: a *Sun* dial under *Reset camera* turns the sun all the way round (0° = from north, 90° = from east), always 45° up. Figures and furniture cast shadows, so the direction reads in the frame and in the saved board. A yellow arrow outside the room in the top view shows where the light comes from.
 - Each board keeps its own sun; a board that hasn't been in the Shot Generator yet starts from the previous board's sun in the same scene.
