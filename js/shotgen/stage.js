@@ -21,12 +21,22 @@ export class Stage {
     // The 2017 MacBook Pro's graphics are weak: draw it at normal resolution there.
     const mac = /Macintosh/.test(navigator.userAgent) && !("ontouchend" in document);
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, mac ? 1 : 2));
+    this.renderer.shadowMap.enabled = true;
+    this.renderer.shadowMap.type = mac ? THREE.PCFShadowMap : THREE.PCFSoftShadowMap;
 
     this.scene = new THREE.Scene();
-    this.scene.add(new THREE.HemisphereLight(0xffffff, 0x6a6a6a, 1.6));
-    const key = new THREE.DirectionalLight(0xffffff, 1.4);
-    key.position.set(3, 6, 2);
-    this.scene.add(key);
+    this.scene.add(new THREE.HemisphereLight(0xffffff, 0x6a6a6a, 1.15));
+    // The sun (SPEC §8.5): one direction on the plan, 45° up, casting shadows from figures and furniture.
+    // Walls don't cast, so the direction always reads on the people, inside or out.
+    this.sun = new THREE.DirectionalLight(0xffffff, 1.9);
+    this.sun.castShadow = true;
+    this.sun.shadow.mapSize.set(mac ? 1024 : 2048, mac ? 1024 : 2048);
+    this.sun.shadow.bias = -0.0005;
+    this.sun.shadow.normalBias = 0.02;
+    this.scene.add(this.sun, this.sun.target);
+    this.sunArrow = new THREE.Group();
+    this.scene.add(this.sunArrow);
+    this.sunDir = 125;
 
     this.shotCam = new THREE.PerspectiveCamera(40, 2.39, 0.05, 500);
     this.shotCam.rotation.order = "YXZ";
@@ -63,9 +73,37 @@ export class Stage {
     }
     this.set = buildSet(room);
     this.scene.add(this.set);
+    this.room = room;
+    this.setSun(this.sunDir);
     const span = room.exterior ? 16 : Math.max(room.w, room.d) + 2;
     this.top = { cx: 0, cz: room.exterior ? 2 : 0, span };
     this.orbit.r = room.exterior ? 14 : Math.max(room.w, room.d) * 1.6;
+    this.request();
+  }
+
+  // dir: where the sun comes from, in degrees on the plan (0 = from north, 90 = from east), always 45° up.
+  setSun(dir) {
+    this.sunDir = dir;
+    const a = rad(dir);
+    const flat = { x: Math.sin(a), z: -Math.cos(a) };   // from the room towards the sun
+    const room = this.room || { w: 8, d: 8, exterior: true };
+    const reach = room.exterior ? 12 : Math.max(room.w, room.d) / 2 + 2;   // what the shadows must cover
+    const far = reach * 3;
+    this.sun.position.set(flat.x * far * Math.SQRT1_2, far * Math.SQRT1_2, flat.z * far * Math.SQRT1_2);
+    this.sun.target.position.set(0, 0, 0);
+    const cam = this.sun.shadow.camera;
+    cam.left = cam.bottom = -reach;
+    cam.right = cam.top = reach;
+    cam.near = 0.5;
+    cam.far = far * 2;
+    cam.updateProjectionMatrix();
+
+    // A yellow arrow outside the room in the top view, pointing the way the light travels.
+    this.sunArrow.clear();
+    const start = new THREE.Vector3(flat.x * (reach + 0.6), (room.exterior ? 0 : room.h) + 0.05, flat.z * (reach + 0.6));
+    const arrow = new THREE.ArrowHelper(new THREE.Vector3(-flat.x, 0, -flat.z), start, 1.4, 0xe8a33d, 0.45, 0.3);
+    arrow.traverse((o) => o.layers.set(LAYER_PLAN));
+    this.sunArrow.add(arrow);
     this.request();
   }
 

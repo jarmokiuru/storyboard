@@ -1,5 +1,10 @@
 # Changelog
 
+## 2026-11-15 — Storyboard v0.11.0 (sun direction)
+- Shot Generator: a *Sun* dial under *Reset camera* turns the sun all the way round (0° = from north, 90° = from east), always 45° up. Figures and furniture cast shadows, so the direction reads in the frame and in the saved board. A yellow arrow outside the room in the top view shows where the light comes from.
+- Each board keeps its own sun; a board that hasn't been in the Shot Generator yet starts from the previous board's sun in the same scene.
+- Walls don't block the sun (yet), so the light always reaches the people, inside or out.
+
 ## 2026-11-15 — Storyboard v0.10.2
 - *Plan for Shot Designer* is now 125 px per metre (was 150): it opens at 1.25 × true size; scale it to 80 % to match Shot Designer's props.
 - Fix: the Shot Generator's picture could come out stretched wide (seen on the iPad). The 3D view now re-measures itself whenever its area on screen changes, and checks again before every frame.

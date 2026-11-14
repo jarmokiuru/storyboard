@@ -35,7 +35,12 @@ export async function makeObject(entry, colour = "#b7b2a8") {
   const { scene, size } = await load(entry.path);
   const copy = scene.clone(true);
   const mat = clay(colour);
-  copy.traverse((m) => { if (m.isMesh) m.material = mat; });
+  copy.traverse((m) => {
+    if (m.isMesh) {
+      m.material = mat;
+      m.castShadow = m.receiveShadow = true;
+    }
+  });
   return { node: copy, size };
 }
 
@@ -47,6 +52,7 @@ export async function makeFigure(entry, colour) {
   copy.traverse((m) => {
     if (m.isMesh || m.isSkinnedMesh) {
       m.material = mat;
+      m.castShadow = m.receiveShadow = true;
       m.frustumCulled = false;   // posed limbs can leave the bind-pose bounds
       const lod = (m.name.match(/[_-]LOD(\d)/i) || [])[1];   // the files use both "_LOD2" and "-LOD2"
       if (lod !== undefined) m.visible = Number(lod) === FIGURE_DETAIL;

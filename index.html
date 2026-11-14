@@ -139,6 +139,9 @@
     </div>
     <div id="sg-sliders"></div>
     <button id="sg-reset">Reset camera</button>
+    <div class="sg-slider" data-unit="°" title="Where the sun comes from on the plan (0° = from north, 90° = from east); always 45° up">
+      <span>Sun</span><input type="range" id="sg-sun" min="0" max="360" step="5" aria-label="Sun direction"><output id="sg-sun-out"></output><button class="sg-zero" id="sg-sun-reset" title="Back to 125° (from the south-east)">↺</button>
+    </div>
     <p class="muted sg-hint">Camera view: drag the picture to pan and tilt (it follows your finger); pinch or scroll to zoom the lens. Top view: drag the camera to move it, the tip of its yellow lines to aim it, the floor to look around; pinch or scroll to zoom. Tap the small view to swap. Add furniture and figures with Add; tap one to choose it, drag it in the top view to move it. A chosen figure shows dots: drag a hand or foot to move the limb, an elbow or knee to bend it, the blue dot to raise or lower the hips, the white dot to turn the head.<br>Mac keys: W A S D or arrows move, R / F up and down, hold Shift to go faster, Z / X roll, Esc back.</p>
     <label class="sg-check"><input type="checkbox" id="sg-speed"> Show speed (frames per second while moving)</label>
   </aside>

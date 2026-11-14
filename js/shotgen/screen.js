@@ -14,7 +14,7 @@ import { parseLens } from "../lens.js";
 import { Things } from "./things.js";
 import { SIZES, frameSize, sizeFromKuvakoko } from "./framing.js";
 import { figuresFor, startPlacing, addMenu, select, selectedItem, moveSelected, deleteSelected, subjectDistance, refreshSelected } from "./placing.js";
-import { uid, sceneOf, BOARD_WIDTH, boardHeight, heading } from "../model.js";
+import { uid, sceneOf, orderedBoards, BOARD_WIDTH, boardHeight, heading } from "../model.js";
 
 const $ = (id) => document.getElementById(id);
 const SLIDERS = [
@@ -26,6 +26,7 @@ const SLIDERS = [
 
 let stage = null;
 let project, board, loc, shot, hooks, figures;
+let sun = 125;   // where the sun comes from on the plan, degrees (0 = north), 45° up
 let zoomRange = null;   // when the board's Lens/Focal is a zoom, e.g. [24, 70]
 let drag = null;
 const touches = new Map();
@@ -79,6 +80,8 @@ export function openShotGenerator(p, b, h) {
   stage.setSet(loc.room);
   showPlan();
   figures = figuresFor(project, board);
+  sun = sunFor(project, board);
+  showSun();
   placeAll();
   apply();
   stage.resize();
@@ -106,7 +109,22 @@ function close() {
 }
 
 const picture = () => stage.snapshot(BOARD_WIDTH, boardHeight(project.ratio));
-const shot3d = () => ({ locationId: loc.id, camera: { ...shot }, figures: structuredClone(figures) });
+const shot3d = () => ({ locationId: loc.id, camera: { ...shot }, figures: structuredClone(figures), sun });
+
+// The board's own sun, else the one on the nearest earlier board of the same scene (light carries through a scene).
+function sunFor(p, b) {
+  if (b.shot3d?.sun != null) return b.shot3d.sun;
+  const scene = orderedBoards(p).filter((x) => x.sceneId === b.sceneId);
+  for (let i = scene.indexOf(b) - 1; i >= 0; i--) if (scene[i].shot3d?.sun != null) return scene[i].shot3d.sun;
+  return 125;
+}
+
+const COMPASS = ["N", "NE", "E", "SE", "S", "SW", "W", "NW"];
+function showSun() {
+  stage.setSun(sun);
+  $("sg-sun").value = sun;
+  $("sg-sun-out").textContent = `${sun}° ${COMPASS[Math.round(sun / 45) % 8]}`;
+}
 
 function save() {
   hooks.save(picture(), shot3d());
@@ -410,6 +428,13 @@ function bind() {
     const f = Number(e.target.dataset?.focal);
     if (f) { shot.focal = f; apply(); }
   };
+  $("sg-sun").oninput = (e) => { sun = Number(e.target.value) % 360; showSun(); };
+  $("sg-sun-reset").onclick = () => { sun = 125; showSun(); };
+  $("sg-sun").addEventListener("wheel", (e) => {
+    e.preventDefault();
+    sun = (((sun + (e.deltaY < 0 ? 5 : -5) * (e.shiftKey ? 3 : 1)) % 360) + 360) % 360;
+    showSun();
+  });
   $("sg-sizes").onclick = (e) => {
     const id = e.target.dataset?.size;
     if (id) frameAt(id);

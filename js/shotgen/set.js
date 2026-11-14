@@ -74,6 +74,7 @@ export function buildSet(room) {
   if (room.exterior) {
     const ground = new THREE.Mesh(new THREE.PlaneGeometry(400, 400), clay(CLAY.ground));
     ground.rotation.x = -Math.PI / 2;
+    ground.receiveShadow = true;
     g.add(ground);
     const grid = new THREE.GridHelper(40, 40, CLAY.grid, CLAY.grid);
     grid.position.y = 0.002;
@@ -84,6 +85,7 @@ export function buildSet(room) {
   const { w, d, h } = room;
   const floor = new THREE.Mesh(new THREE.PlaneGeometry(w, d), clay(CLAY.floor));
   floor.rotation.x = -Math.PI / 2;
+  floor.receiveShadow = true;
   g.add(floor);
   g.add(floorGrid(w, d));
 
@@ -99,6 +101,7 @@ export function buildSet(room) {
     const openings = openingsOn(room, side).map((o) => ({ ...o, offset: o.offset * flip }));
     const panel = wallPanel(wall.length, h, openings);
     panel.position.set(wall.pos[0], 0, wall.pos[1]);
+    panel.receiveShadow = true;   // shadows of people fall on walls; walls themselves don't block the sun
     panel.rotation.y = wall.rotY;
     g.add(panel);
   }
