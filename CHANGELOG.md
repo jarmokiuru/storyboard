@@ -1,5 +1,9 @@
 # Changelog
 
+## 2026-11-15 — Storyboard v0.10.1
+- *Plan for Shot Designer* is now 150 px per metre (was 800). Shot Designer reads small pictures at 100 px/m = true size and shrinks big ones, so the 800 px/m plans opened far too big. 150 px/m opens at 1.5 × true size, with room around the objects; scale it to 67 % to match Shot Designer's props. The density is in the file name, and rooms over about 9 m get fewer px/m so Shot Designer never shrinks them.
+- New *Plan for Shot Designer, sharp (800 px/m)* for crisp lines when you scale by hand.
+
 ## 2026-10-25 — Storyboard v0.10.0 (phase 5: floor plans)
 - Shot Generator → *Set…* is now a menu: room size, door and window; plan picture; plan for Shot Designer; location files.
 - **Plan picture:** pick a picture of the plan, tap the inside corners at both ends of the north wall, type that wall's length. The picture is scaled, turned and lined up with the room, and shows under the top and orbit views (never in the saved frame). Zoom 2× / 4× and drag the markers to be exact. *Line up the plan again* and *Remove plan picture* are there too.

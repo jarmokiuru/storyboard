@@ -1,17 +1,25 @@
 // Floor plan for Shot Designer (SPEC §8.6, Jarmo's rules 2026-10-25): a blank PNG of the room — walls, windows,
 // doors with their swing, nothing else. No text, labels, scale bar, north arrow or furniture: Shot Designer lays
 // its own elements on top. The picture's edges are the room's inside faces (walls drawn inside the edge), so its
-// width is the room width and its height the depth, for calibrating. 800 pixels per metre, stored in the file.
+// width is the room width and its height the depth, for calibrating. The density is stored in the file.
+//
+// Shot Designer reads pictures up to roughly 1400–1500 px at a fixed rate (100 px/m opens at true size —
+// tested 2026-11-15: its 5 m car matched the 5 m room wall to wall) and shrinks bigger ones. So the default is
+// 150 px/m, a little larger than true size as Jarmo prefers ("I'd rather scale down than up"), kept under
+// 1400 px on the long side; "sharp" is 800 px/m for scaling by hand.
 
 import { crc32 } from "./zip.js";
 
 const WALL = 0.08;     // metres: drawn wall thickness, inside the edge
 const LINE = 0.012;    // metres: thin lines (door leaf and swing, window)
-const MAX_PIXELS = 16e6;   // iPad Safari refuses bigger canvases; big rooms drop below 800 px/m
+const MAX_PIXELS = 16e6;   // iPad Safari refuses bigger canvases
+export const SHOT_DESIGNER = { ppm: 150, maxSide: 1400 };
+export const SHARP = { ppm: 800, maxSide: Infinity };
 
 // room: { w, d, door, window } in metres (plan axes: x west → east, z north → south; north up).
-export async function blankPlan(room, ppm = 800) {
-  while (room.w * ppm * room.d * ppm > MAX_PIXELS && ppm > 100) ppm -= 50;
+// Big rooms get fewer px/m to stay under maxSide and the canvas limit; the result says how many.
+export async function blankPlan(room, { ppm, maxSide } = SHOT_DESIGNER) {
+  ppm = Math.min(ppm, Math.floor(maxSide / Math.max(room.w, room.d)), Math.floor(Math.sqrt(MAX_PIXELS / (room.w * room.d))));
   const W = Math.round(room.w * ppm);
   const H = Math.round(room.d * ppm);
   const c = document.createElement("canvas");

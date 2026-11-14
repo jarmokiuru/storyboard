@@ -7,7 +7,7 @@ import { defaultRoom } from "./set.js";
 import { SENSORS, PRIMES, DEFAULT_SENSOR, sensorById } from "./sensors.js";
 import { formDialog, toast, openMenu, choose, confirmBox, pickFile, shareFile } from "../ui.js";
 import * as db from "../db.js";
-import { blankPlan } from "../plan-export.js";
+import { blankPlan, SHOT_DESIGNER, SHARP } from "../plan-export.js";
 import { loadPlanPicture, calibratePlan } from "../plan-calibrate.js";
 import { locationFile, readLocationFile } from "../location-file.js";
 import { parseLens } from "../lens.js";
@@ -244,7 +244,8 @@ function setMenu(anchor) {
       { label: "Remove plan picture", action: removePlan },
     ] : []),
     { type: "sep" },
-    { label: "Plan for Shot Designer (PNG)", action: exportPlan },
+    { label: "Plan for Shot Designer (PNG)", action: () => exportPlan(SHOT_DESIGNER) },
+    { label: "Plan for Shot Designer, sharp (800 px/m)", action: () => exportPlan(SHARP) },
     { label: "Save location file", action: saveLocation },
     { label: "Open location file…", action: openLocation },
   ]);
@@ -291,14 +292,16 @@ async function removePlan() {
 const fileName = (s) => String(s).replace(/[\\/:*?"<>|]+/g, "-").trim() || "Set";
 const metres = (v) => Number(v).toFixed(2);
 
-// Jarmo's rules: blank, cropped wall to wall, 800 px/m. The size and tag go in the file name, never on the plan.
-async function exportPlan() {
+// Jarmo's rules: blank, cropped wall to wall. The size, density and tag go in the file name, never on the plan.
+// The default opens in Shot Designer at 1.5 × true size (scale it down to fit its props); sharp is for scaling by hand.
+async function exportPlan(kind) {
   const r = loc.room;
   if (r.exterior) return toast("An exterior has no walls to draw. Shot Designer plans are for rooms.");
-  const out = await blankPlan(r);
-  const name = `${fileName(loc.name)} plan ${metres(r.w)} x ${metres(r.d)} m (${loc.tag}).png`;
-  const note = out.ppm < 800 ? ` The room is large, so it's ${out.ppm} px per metre instead of 800.` : "";
-  toast(`Picture width = ${metres(r.w)} m (west–east), height = ${metres(r.d)} m (north–south).${note}`, 6000);
+  const out = await blankPlan(r, kind);
+  const name = `${fileName(loc.name)} plan ${metres(r.w)} x ${metres(r.d)} m ${out.ppm} px per m (${loc.tag}).png`;
+  const scale = kind === SHOT_DESIGNER ? ` In Shot Designer it opens at ${Math.round(out.ppm)}% of true size; scale it to ${Math.round(10000 / out.ppm)}% to match its props.` : "";
+  const note = out.ppm < kind.ppm ? ` The room is large, so it's ${out.ppm} px per metre instead of ${kind.ppm}.` : "";
+  toast(`Picture width = ${metres(r.w)} m (west–east), height = ${metres(r.d)} m (north–south).${scale}${note}`, 7000);
   await shareFile(out.blob, name, "image/png");
 }
 
