@@ -8,3 +8,4 @@ Not a real production. Three scenes, two characters (A, adult male 182 cm; B, ad
 
 Set details for the 3D test are in `SPEC.md` §10.
 Shot sizes here use English abbreviations (WS, MS, CU…); Jarmo's own `Kuvakoko` abbreviations may differ.
+- `kitchen-plan.png` — a plan of the test kitchen (5.0 × 4.0 m, door in the east wall, window in the south wall, table in the middle), drawn like a scanned plan: paper margin and turned 3°, for testing *Set… → Add plan picture*. Made by `make_kitchen_plan.py`.
