@@ -10,7 +10,7 @@ import { planScale } from "../plan-calibrate.js";
 const BG = 0x1d1f23;
 const SKY = 0xcfd3d8;
 // Starting light (as built in v0.11.0): sun from the south-east, 45° up; strengths in % of the original look.
-export const LIGHT = { dir: 125, height: 45, sun: 50, fill: 50, outside: 83 };
+export const LIGHT = { dir: 125, height: 45, sun: 50, fill: 50, outside: 83, diffusion: 0, walls: false };
 const FRUSTUM_LENGTH = 3.5;   // metres drawn in the top view
 
 export const rad = (d) => (d * Math.PI) / 180;
@@ -24,7 +24,8 @@ export class Stage {
     const mac = /Macintosh/.test(navigator.userAgent) && !("ontouchend" in document);
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, mac ? 1 : 2));
     this.renderer.shadowMap.enabled = true;
-    this.renderer.shadowMap.type = mac ? THREE.PCFShadowMap : THREE.PCFSoftShadowMap;
+    this.renderer.shadowMap.type = THREE.PCFShadowMap;   // three.js 0.186 dropped PCFSoftShadowMap; softness = shadow.radius
+    this.shadowSize = mac ? 1024 : 2048;
 
     this.scene = new THREE.Scene();
     this.fill = new THREE.HemisphereLight(0xffffff, 0x6a6a6a, 1.15);
@@ -33,7 +34,7 @@ export class Stage {
     // Walls don't cast, so the direction always reads on the people, inside or out.
     this.sun = new THREE.DirectionalLight(0xffffff, 1.9);
     this.sun.castShadow = true;
-    this.sun.shadow.mapSize.set(mac ? 1024 : 2048, mac ? 1024 : 2048);
+    this.sun.shadow.mapSize.set(this.shadowSize, this.shadowSize);
     this.sun.shadow.bias = -0.0005;
     this.sun.shadow.normalBias = 0.02;
     this.scene.add(this.sun, this.sun.target);
@@ -86,12 +87,18 @@ export class Stage {
   }
 
   // light: { dir (° on the plan the sun comes from, 0 = north), height (° above the horizon),
-  //          sun, fill, outside (0–100 %: sun strength, ambient fill, brightness of the sky outside) }.
+  //          sun, fill, outside (0–100 %: sun strength, ambient fill, brightness of the sky outside),
+  //          diffusion (0–100 %: how soft the sun is), walls (true: walls and ceiling block the sun) }.
   setLight(light) {
     this.light = { ...LIGHT, ...light };
-    const { dir, height, sun, fill, outside } = this.light;
-    this.sun.intensity = (sun / 50) * 1.9;
-    this.fill.intensity = (fill / 50) * 1.15;
+    const { dir, height, sun, fill, outside, diffusion, walls } = this.light;
+    // Diffusion as an overcast sky: shadow edges spread and fade, and part of the sun's light becomes fill.
+    const d = Math.min(1, Math.max(0, diffusion / 100));
+    this.sun.intensity = (sun / 50) * 1.9 * (1 - 0.35 * d);
+    this.fill.intensity = (fill / 50) * 1.15 + (sun / 50) * 0.4 * d;
+    this.sun.shadow.intensity = 1 - 0.35 * d;
+    this.sun.shadow.radius = 1 + 9 * d;   // in shadow-map texels: about 1–15 cm of soft edge in a room
+    this.set?.traverse((o) => { if (o.userData.blocksSun) o.castShadow = !!walls; });
     this.sky.setHSL(0.58, 0.08, outside / 100, THREE.SRGBColorSpace);
     const a = rad(dir);
     const up = rad(Math.min(90, Math.max(1, height)));

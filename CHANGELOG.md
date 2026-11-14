@@ -1,5 +1,10 @@
 # Changelog
 
+## 2026-11-15 — Storyboard v0.13.0 (diffusion, walls block the sun)
+- *Diffusion* in the Light section: 0 % = hard sun, 100 % = overcast — shadow edges soften (up to about 15 cm in a room) and fade, and part of the sun's light goes into the fill.
+- *Walls block the sun* (tick box under the light sliders): walls and ceiling cast shadows, so the sun gets in only through the window and door — a sun patch on the floor, the rest of the room on fill. Off by default, as before.
+- Both are saved with the board and carried through the scene like the other light settings.
+
 ## 2026-11-15 — Storyboard v0.12.0 (light)
 - The Shot Generator's *Sun* row is now a *Light* section, modelled on Storyboarder's World panel: **Sun** (direction), **Height** (5–90° above the horizon; low sun = long shadows), **Strength** (sun brightness), **Fill** (ambient light: how bright the shadow side is) and **Outside** (brightness of the sky seen through windows or behind an exterior). Each has ↺ to go back.
 - *Outside* changes only what the lens sees; the top and orbit views keep their usual background.

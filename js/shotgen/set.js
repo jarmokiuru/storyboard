@@ -101,10 +101,19 @@ export function buildSet(room) {
     const openings = openingsOn(room, side).map((o) => ({ ...o, offset: o.offset * flip }));
     const panel = wallPanel(wall.length, h, openings);
     panel.position.set(wall.pos[0], 0, wall.pos[1]);
-    panel.receiveShadow = true;   // shadows of people fall on walls; walls themselves don't block the sun
+    panel.receiveShadow = true;   // shadows of people fall on walls
+    panel.userData.blocksSun = true;   // casts only when "Walls block the sun" is on (stage.setLight)
     panel.rotation.y = wall.rotY;
     g.add(panel);
   }
+
+  // The ceiling seen by the lens is on its own layer, which the shadow pass may skip; this invisible copy
+  // is what keeps the sun out from above when walls block it.
+  const roof = new THREE.Mesh(new THREE.PlaneGeometry(w, d), new THREE.MeshBasicMaterial({ colorWrite: false, depthWrite: false }));
+  roof.rotation.x = Math.PI / 2;
+  roof.position.y = h;
+  roof.userData.blocksSun = true;
+  g.add(roof);
 
   g.add(planOutline(room));
   return g;

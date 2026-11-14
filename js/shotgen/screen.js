@@ -132,10 +132,11 @@ const LIGHT_ROWS = [
   ["height", "Height", 5, 90, 1, "How high the sun is above the horizon: low = long shadows, 90° = straight overhead"],
   ["sun", "Strength", 0, 100, 1, "How bright the sun is"],
   ["fill", "Fill", 0, 100, 1, "Ambient light: how bright the shadow side is"],
+  ["diffusion", "Diffusion", 0, 100, 1, "How soft the sun is: 0 = hard sun, 100 = overcast (soft, faint shadows)"],
   ["outside", "Outside", 0, 100, 1, "Brightness of the sky outside — what you see through the window or behind an exterior"],
 ];
 const COMPASS = ["N", "NE", "E", "SE", "S", "SW", "W", "NW"];
-const lightText = (key, v) => (key === "dir" ? `${v}° ${COMPASS[Math.round(v / 45) % 8]}` : key === "height" ? `${v}°` : `${v}%`);
+const lightText = (key, v) => (key === "walls" ? "" : key === "dir" ? `${v}° ${COMPASS[Math.round(v / 45) % 8]}` : key === "height" ? `${v}°` : `${v}%`);
 
 function buildLight() {
   const box = $("sg-light");
@@ -147,6 +148,12 @@ function buildLight() {
     row.innerHTML = `<span>${label}</span><input type="range" min="${min}" max="${max}" step="${step}" data-light="${key}" aria-label="${title}"><output data-light-out="${key}"></output><button class="sg-zero" data-light-reset="${key}" title="Back to ${lightText(key, LIGHT[key])}">↺</button>`;
     box.append(row);
   }
+  box.querySelector(".sg-check")?.remove();
+  const walls = document.createElement("label");
+  walls.className = "sg-check";
+  walls.title = "Walls and ceiling cast shadows: the sun gets in only through the window and door";
+  walls.innerHTML = `<input type="checkbox" data-light-walls> Walls block the sun`;
+  box.append(walls);
 }
 
 function showLight() {
@@ -155,6 +162,7 @@ function showLight() {
     $("sg-light").querySelector(`[data-light="${key}"]`).value = light[key];
     $("sg-light").querySelector(`[data-light-out="${key}"]`).textContent = lightText(key, light[key]);
   }
+  $("sg-light").querySelector("[data-light-walls]").checked = !!light.walls;
 }
 
 function save() {
@@ -465,6 +473,13 @@ function bind() {
     light[key] = key === "dir" ? ((v % 360) + 360) % 360 : Math.min(max, Math.max(min, v));
     showLight();
   };
+  $("sg-light").addEventListener("change", (e) => {
+    if (e.target.matches("[data-light-walls]")) {
+      light.walls = e.target.checked;
+      if (light.walls && loc.room.exterior) toast("An exterior has no walls; this takes effect in rooms.");
+      showLight();
+    }
+  });
   $("sg-light").addEventListener("input", (e) => {
     const key = e.target.dataset?.light;
     if (key) setLightValue(key, Number(e.target.value));
