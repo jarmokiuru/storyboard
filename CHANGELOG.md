@@ -1,5 +1,9 @@
 # Changelog
 
+## 2026-11-15 — Storyboard v0.14.0 (outline shading)
+- Shot Generator: *Shading* — **Clay** (as before) or **Outline**, Storyboarder's default look: black edge lines around figures and furniture, in the camera view and on the saved board, so the frame reads more like a drawing. Posed figures keep their lines. The room keeps its own thin edge lines.
+- The choice is one setting for the whole project.
+
 ## 2026-11-15 — Storyboard v0.13.0 (diffusion, walls block the sun)
 - *Diffusion* in the Light section: 0 % = hard sun, 100 % = overcast — shadow edges soften (up to about 15 cm in a room) and fade, and part of the sun's light goes into the fill.
 - *Walls block the sun* (tick box under the light sliders): walls and ceiling cast shadows, so the sun gets in only through the window and door — a sun patch on the floor, the rest of the room on fill. Off by default, as before.

@@ -82,6 +82,7 @@ export function openShotGenerator(p, b, h) {
   figures = figuresFor(project, board);
   light = lightFor(project, board);
   showLight();
+  showShading();
   placeAll();
   apply();
   stage.resize();
@@ -137,6 +138,13 @@ const LIGHT_ROWS = [
 ];
 const COMPASS = ["N", "NE", "E", "SE", "S", "SW", "W", "NW"];
 const lightText = (key, v) => (key === "walls" ? "" : key === "dir" ? `${v}° ${COMPASS[Math.round(v / 45) % 8]}` : key === "height" ? `${v}°` : `${v}%`);
+
+// Shading is one look for the whole project, like Storyboarder's per-scene setting.
+function showShading() {
+  const mode = project.shading === "outline" ? "outline" : "clay";
+  stage.setShading(mode);
+  for (const b of $("sg-shading").children) b.classList.toggle("on", b.dataset.shading === mode);
+}
 
 function buildLight() {
   const box = $("sg-light");
@@ -468,6 +476,13 @@ function bind() {
     if (f) { shot.focal = f; apply(); }
   };
   buildLight();
+  $("sg-shading").onclick = (e) => {
+    const mode = e.target.dataset?.shading;
+    if (!mode) return;
+    project.shading = mode;
+    showShading();
+    hooks.changed();
+  };
   const setLightValue = (key, v) => {
     const [, , min, max] = LIGHT_ROWS.find((r) => r[0] === key);
     light[key] = key === "dir" ? ((v % 360) + 360) % 360 : Math.min(max, Math.max(min, v));

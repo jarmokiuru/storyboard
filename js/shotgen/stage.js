@@ -6,6 +6,7 @@ import { buildSet, LAYER_CAMERA_ONLY, LAYER_PLAN } from "./set.js";
 import { LAYER_HANDLES } from "./things.js";
 import { verticalAov, horizontalAov } from "./sensors.js";
 import { planScale } from "../plan-calibrate.js";
+import { drawOutlines } from "./outline.js";
 
 const BG = 0x1d1f23;
 const SKY = 0xcfd3d8;
@@ -41,6 +42,7 @@ export class Stage {
     this.sunArrow = new THREE.Group();
     this.scene.add(this.sunArrow);
     this.light = { ...LIGHT };
+    this.shading = "clay";   // or "outline": black edge lines on figures and furniture in the lens view
     this.sky = new THREE.Color(SKY);
 
     this.shotCam = new THREE.PerspectiveCamera(40, 2.39, 0.05, 500);
@@ -123,6 +125,17 @@ export class Stage {
     const arrow = new THREE.ArrowHelper(new THREE.Vector3(-flat.x, 0, -flat.z), start, 1.4, 0xe8a33d, 0.45, 0.3);
     arrow.traverse((o) => o.layers.set(LAYER_PLAN));
     this.sunArrow.add(arrow);
+    this.request();
+  }
+
+  // Outline shading: edge lines on figures and furniture only (the room has its own edge lines).
+  outlines() {
+    if (this.shading !== "outline") return;
+    drawOutlines(this.renderer, this.scene, this.shotCam, [this.set, this.things?.handles].filter(Boolean));
+  }
+
+  setShading(mode) {
+    this.shading = mode === "outline" ? "outline" : "clay";
     this.request();
   }
 
@@ -277,6 +290,7 @@ export class Stage {
     if (cam === this.topCam) this.aimTop(rect.w / rect.h);
     if (cam === this.orbitCam) this.aimOrbit(rect.w / rect.h);
     r.render(this.scene, cam);
+    if (cam === this.shotCam) this.outlines();
   }
 
   aimTop(aspect) {
@@ -330,6 +344,7 @@ export class Stage {
     this.shotCam.updateProjectionMatrix();
     this.shotCam.layers.disable(LAYER_HANDLES);   // no joint dots on the board
     r.render(this.scene, this.shotCam);
+    this.outlines();
     this.shotCam.layers.enable(LAYER_HANDLES);
     const out = document.createElement("canvas");
     out.width = width;

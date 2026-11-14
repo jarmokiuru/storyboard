@@ -32,6 +32,7 @@ Entries may be stored or deflated. A file with only `project.json` is valid (a s
 | `title` [required] | string | Project name |
 | `ratio` | number | Aspect ratio, e.g. 2.39 (default 2.39). Changing it later doesn't resize drawings, so a merge never changes it. |
 | `sensor` | string | Camera format id from `js/shotgen/sensors.js`, e.g. `"mlf-45k-og"` (ALEXA Mini LF 4.5K LF 3:2 Open Gate). Default `mlf-45k-og`. |
+| `shading` | string | Shot Generator look for the whole project: `"clay"` (default) or `"outline"` (black edge lines on figures and furniture). |
 | `lenses` | number[] | The lens set in mm, shown as the Shot Generator's lens buttons. Default `[14, 18, 25, 35, 50, 85, 100, 135, 150, 180]`. |
 | `characters` | object[] | `{ name, model, height }` — see below. Used by the Shot Generator's Add menu. |
 | `scenes` [required] | object[] | In story order. |
