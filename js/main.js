@@ -3,6 +3,7 @@
 import * as db from "./db.js";
 import { initProjects, showProjects } from "./projects-screen.js";
 import { initEditor, openProject, flushEditor } from "./editor-screen.js";
+import { initViewer, openViewer, phoneSized } from "./viewer-screen.js";
 import { setupOffline, storageKept } from "./offline.js";
 import { banner } from "./ui.js";
 
@@ -11,22 +12,29 @@ const $ = (id) => document.getElementById(id);
 function show(screen) {
   $("projects-screen").hidden = screen !== "projects";
   $("editor-screen").hidden = screen !== "editor";
+  $("viewer-screen").hidden = screen !== "viewer";
 }
 
+// On a phone the project opens for viewing only (SPEC §1).
 async function open(project) {
+  history.replaceState(null, "", location.search + "#p=" + project.id);
+  if (phoneSized()) {
+    show("viewer");
+    return openViewer(project);
+  }
   show("editor");
-  history.replaceState(null, "", "#p=" + project.id);
   await openProject(project);
 }
 
 async function exit() {
   show("projects");
-  history.replaceState(null, "", location.pathname);
+  history.replaceState(null, "", location.pathname + location.search);
   await showProjects();
 }
 
 initEditor({ exit });
 initProjects({ open });
+initViewer({ exit });
 
 const match = location.hash.match(/^#p=(.+)$/);
 const last = match && (await db.getProject(match[1]));

@@ -1,5 +1,12 @@
 # Changelog
 
+## 2026-11-15 — Storyboard v0.15.0 (iPhone viewing)
+- On the iPhone a project opens in a viewer instead of the board editor: one board at a time, big, with the scene heading, Kuva #, Kuvakoko · Lens · Movement and the Sisältö, dialogue, action and notes underneath.
+- Swipe left or right, or tap the frame's left or right edge, to move between boards; ‹ › buttons do the same. Tap the middle of the frame for the frame alone; tap again to bring the details back.
+- Turn the phone on its side: frame on the left, details on the right.
+- *Boards* shows every board under its scene heading (with act dividers); tap one to open it. A scene menu jumps to a scene.
+- The viewer never changes the project. *New project* is hidden on the phone; *Import project file* and *Delete* stay.
+
 ## 2026-11-15 — Storyboard v0.14.1
 - Outline lines a little thinner (about 2.8 px on a full-size board, was 3.4).
 

@@ -103,6 +103,32 @@
   <footer id="strip"></footer>
 </section>
 
+<section id="viewer-screen" hidden>
+  <header class="bar">
+    <button id="v-back">‹ Projects</button>
+    <span id="v-title" class="title"></span>
+    <span class="spacer"></span>
+    <button id="v-grid-btn">Boards</button>
+  </header>
+  <div id="v-main">
+    <div id="v-frame-area">
+      <div id="v-frame"><img id="v-img" alt="" draggable="false"></div>
+      <div id="v-nav">
+        <button id="v-prev" aria-label="Previous board">‹</button>
+        <span id="v-count" class="muted"></span>
+        <button id="v-next" aria-label="Next board">›</button>
+      </div>
+    </div>
+    <div id="v-details">
+      <select id="v-scene" aria-label="Jump to scene"></select>
+      <p id="v-heading" class="heading"></p>
+      <p><strong id="v-kuva"></strong> <span id="v-line" class="muted"></span></p>
+      <dl id="v-fields"></dl>
+    </div>
+  </div>
+  <div id="v-grid" hidden></div>
+</section>
+
 <section id="shotgen" hidden>
   <header class="bar">
     <button id="sg-back">‹ Board</button>

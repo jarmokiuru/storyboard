@@ -7,6 +7,7 @@ import { readProjectFile, installProject } from "./projectfile.js";
 import { mergeStarter } from "./importer.js";
 import { standalone, storageKept } from "./offline.js";
 import { VERSION } from "./version.js";
+import { phoneSized } from "./viewer-screen.js";
 
 const $ = (id) => document.getElementById(id);
 let openProject;
@@ -15,6 +16,7 @@ export function initProjects({ open }) {
   openProject = open;
   $("app-version").textContent = "v" + VERSION;
   $("new-project").onclick = newProjectDialog;
+  $("new-project").hidden = phoneSized();   // the phone only views boards
   $("import-project").onclick = importDialog;
   $("project-list").addEventListener("click", async (e) => {
     const li = e.target.closest("li");
