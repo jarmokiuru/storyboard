@@ -1,5 +1,8 @@
 # Changelog
 
+## 2026-11-15 — Storyboard v0.14.1
+- Outline lines a little thinner (about 2.8 px on a full-size board, was 3.4).
+
 ## 2026-11-15 — Storyboard v0.14.0 (outline shading)
 - Shot Generator: *Shading* — **Clay** (as before) or **Outline**, Storyboarder's default look: black edge lines around figures and furniture, in the camera view and on the saved board, so the frame reads more like a drawing. Posed figures keep their lines. The room keeps its own thin edge lines.
 - The choice is one setting for the whole project.

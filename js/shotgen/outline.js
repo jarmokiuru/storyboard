@@ -5,7 +5,7 @@
 
 import * as THREE from "three";
 
-const WIDTH = 0.008;   // outline width as a share of the frame height: ~1.8 px on screen, ~3.4 px on a 2048-px board
+const WIDTH = 0.0065;   // outline width as a share of the frame height: ~1.4 px on screen, ~2.8 px on a 2048-px board (Jarmo: a little thinner than 0.008)
 
 const material = new THREE.MeshLambertMaterial({ color: 0x000000, side: THREE.BackSide });
 material.onBeforeCompile = (shader) => {
