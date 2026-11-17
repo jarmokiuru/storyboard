@@ -147,6 +147,36 @@ export function deleteSelected() {
   select(null);
 }
 
+// Cmd-D, as in Storyboarder: a copy of the chosen piece or figure, half a metre to the east, then chosen.
+export async function duplicateSelected() {
+  const it = selectedItem();
+  if (!it) return;
+  const copy = JSON.parse(JSON.stringify(it));
+  copy.id = uid();
+  copy.x = Math.round((it.x + 0.5) * 100) / 100;
+  if (it.kind === "figure") {
+    copy.colour = FIGURE_COLOURS[ctx.figures.length % FIGURE_COLOURS.length];
+    if (copy.lookAt && copy.lookAt !== "camera" && copy.lookAt !== "point") copy.lookAt = it.lookAt;
+    ctx.figures.push(copy);
+  } else {
+    ctx.loc.objects.push(copy);
+    ctx.setChanged();
+  }
+  await ctx.things.put(copy);
+  select(copy.id);
+}
+
+// Cmd-B, Storyboarder's "drop": the chosen piece or figure back down to the floor (elevation 0).
+export function dropSelected() {
+  const it = selectedItem();
+  if (!it || !it.y) return;
+  it.y = 0;
+  ctx.things.put(it);
+  if (it.kind === "object") ctx.setChanged();
+  showSelected();
+  ctx.redraw();
+}
+
 // Camera to the selected figure's eyes, in metres.
 export function subjectDistance() {
   const it = selectedItem();

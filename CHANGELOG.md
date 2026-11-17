@@ -1,5 +1,9 @@
 # Changelog
 
+## 2026-11-17 — Storyboard v0.17.0 (Shot Generator keys)
+- Shot Generator keys now follow Storyboarder's: **T** top view ↔ camera view, **[** wider lens / **]** longer lens (steps through the lens set), **Cmd-D** duplicate the chosen piece or figure (half a metre to the side), **Cmd-B** drop it to the floor, **Cmd-K** switch Clay ↔ Outline. Already there: W A S D / arrows, R / F, Shift, Z / X roll, Backspace delete, Esc.
+- The key list under the Shot Generator panel lists them all.
+
 ## 2026-11-17 — Storyboard v0.16.1
 - iPad colour pick works with a held finger: the iPad reports a held fingertip as wider than a tap, and v0.16.0 took it for a resting hand. A palm still doesn't pick.
 - Pencil log: wide touches now show their size ("up to 64 px wide") instead of "cancelled by the iPad".

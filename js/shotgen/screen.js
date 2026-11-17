@@ -13,7 +13,7 @@ import { locationFile, readLocationFile } from "../location-file.js";
 import { parseLens } from "../lens.js";
 import { Things } from "./things.js";
 import { SIZES, frameSize, sizeFromKuvakoko } from "./framing.js";
-import { figuresFor, startPlacing, addMenu, select, selectedItem, moveSelected, deleteSelected, subjectDistance, refreshSelected } from "./placing.js";
+import { figuresFor, startPlacing, addMenu, select, selectedItem, moveSelected, deleteSelected, duplicateSelected, dropSelected, subjectDistance, refreshSelected } from "./placing.js";
 import { uid, sceneOf, orderedBoards, BOARD_WIDTH, boardHeight, heading } from "../model.js";
 
 const $ = (id) => document.getElementById(id);
@@ -284,6 +284,20 @@ function readout() {
   const subject = (d == null ? "" : ` · subject ${d.toFixed(2)} m`) + (zoomRange ? ` · zoom ${zoomRange[0]}–${zoomRange[1]} mm` : "");
   const speed = $("sg-speed").checked ? ` · ${stage.fps ? stage.fps + " fps" : "move to measure"}` : "";
   $("sg-readout").textContent = `${shot.focal} mm · ${stage.hfov.toFixed(1)}° horizontal · height ${Math.round(shot.height)} cm · tilt ${shot.tilt.toFixed(1)}°${subject} · ${s.camera} ${s.mode}${speed}`;
+}
+
+// [ / ]: the next wider or longer lens in the project's lens set (or the prime set).
+function stepLens(dir) {
+  const set = [...(project.lenses?.length ? project.lenses : PRIMES)].map(Number).sort((a, b) => a - b);
+  const next = dir < 0 ? set.filter((f) => f < shot.focal - 0.01).pop() : set.find((f) => f > shot.focal + 0.01);
+  if (next) shot.focal = next;
+}
+
+function cycleShading() {
+  project.shading = project.shading === "outline" ? "clay" : "outline";
+  showShading();
+  hooks.changed();
+  stage.request();
 }
 
 function setView(v) {
@@ -726,8 +740,11 @@ function wheel(e) {
   zoom(Math.exp(e.deltaY * 0.002));
 }
 
-// Mac keys, as in Storyboarder's Shot Generator: W/A/S/D or the arrows move the camera, R/F raise and lower it,
-// Shift moves faster. Movement is smooth while a key is held. Z/X roll, Esc goes back to the board.
+// Mac keys, as in Storyboarder's Shot Generator (read from its installed app, 2026-11-17): W/A/S/D or the arrows
+// move the camera, R/F raise and lower it, Shift moves faster (smooth while held). Z/X roll, T top view ↔ camera
+// view, [ wider lens / ] longer lens (through the lens set), Backspace deletes the chosen piece, Esc lets go of it
+// (or goes back to the board when nothing is chosen), Cmd-D duplicates, Cmd-B drops to the floor, Cmd-K switches
+// Clay/Outline.
 const MOVES = { w: [0, 1], arrowup: [0, 1], s: [0, -1], arrowdown: [0, -1], a: [-1, 0], arrowleft: [-1, 0], d: [1, 0], arrowright: [1, 0] };
 const SPEED = 1.2;        // metres per second; Shift × 3
 const LIFT = 0.6;         // metres per second up or down
@@ -739,8 +756,15 @@ let lastTick = 0;
 const typing = (t) => t.matches?.("textarea, select, input:not([type=range]):not([type=checkbox]):not([type=button])");
 
 function keys(e) {
-  if ($("shotgen").hidden || typing(e.target) || document.querySelector("dialog[open]") || e.metaKey || e.ctrlKey) return;
+  if ($("shotgen").hidden || typing(e.target) || document.querySelector("dialog[open]")) return;
   const key = e.key.toLowerCase();
+  if (e.metaKey || e.ctrlKey) {
+    const cmd = { d: duplicateSelected, b: dropSelected, k: cycleShading }[key];
+    if (!cmd || e.shiftKey || e.altKey) return;
+    e.preventDefault();
+    e.stopPropagation();
+    return cmd();
+  }
   fast = e.shiftKey;
   if (e.target.type === "range" && key.startsWith("arrow")) return;   // a chosen slider steps with the arrows
   if (MOVES[key] || key === "r" || key === "f") {
@@ -759,6 +783,9 @@ function keys(e) {
     backspace: deleteSelected,
     delete: deleteSelected,
     escape: () => (selectedItem() ? select(null) : close()),
+    t: () => setView(stage.view === "top" ? "camera" : "top"),
+    "[": () => stepLens(-1),
+    "]": () => stepLens(1),
   };
   if (!other[key]) return;
   e.preventDefault();
