@@ -1,5 +1,8 @@
 # Changelog
 
+## 2026-11-17 — Storyboard v0.17.1
+- Shot Generator: Cmd-B, Cmd-D and Cmd-K now work right after typing in one of the panel's number boxes (e.g. the elevation); before, the keys stayed in the box and nothing happened.
+
 ## 2026-11-17 — Storyboard v0.17.0 (Shot Generator keys)
 - Shot Generator keys now follow Storyboarder's: **T** top view ↔ camera view, **[** wider lens / **]** longer lens (steps through the lens set), **Cmd-D** duplicate the chosen piece or figure (half a metre to the side), **Cmd-B** drop it to the floor, **Cmd-K** switch Clay ↔ Outline. Already there: W A S D / arrows, R / F, Shift, Z / X roll, Backspace delete, Esc.
 - The key list under the Shot Generator panel lists them all.

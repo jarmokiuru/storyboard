@@ -756,15 +756,19 @@ let lastTick = 0;
 const typing = (t) => t.matches?.("textarea, select, input:not([type=range]):not([type=checkbox]):not([type=button])");
 
 function keys(e) {
-  if ($("shotgen").hidden || typing(e.target) || document.querySelector("dialog[open]")) return;
+  if ($("shotgen").hidden || document.querySelector("dialog[open]")) return;
   const key = e.key.toLowerCase();
+  // Cmd keys work even from a number box in the panel (e.g. right after typing an elevation); the box is
+  // left first, so it can't write its old value back over the change.
   if (e.metaKey || e.ctrlKey) {
     const cmd = { d: duplicateSelected, b: dropSelected, k: cycleShading }[key];
-    if (!cmd || e.shiftKey || e.altKey) return;
+    if (!cmd || e.shiftKey || e.altKey || e.target.matches?.("textarea")) return;
     e.preventDefault();
     e.stopPropagation();
+    if (typing(e.target)) e.target.blur();
     return cmd();
   }
+  if (typing(e.target)) return;
   fast = e.shiftKey;
   if (e.target.type === "range" && key.startsWith("arrow")) return;   // a chosen slider steps with the arrows
   if (MOVES[key] || key === "r" || key === "f") {
