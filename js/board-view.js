@@ -3,7 +3,7 @@
 
 import { LAYERS } from "./model.js";
 import { readSample, widthFor, drawSegment, drawDot, notePressure, reach } from "./brush.js";
-import { History } from "./history.js";
+import { History, historyFor, forgetHistory } from "./history.js";
 import { drawGuides, drawOnion } from "./guides.js";
 import { note, watch, isBigTouch } from "./pencil-log.js";
 
@@ -12,7 +12,8 @@ const HAS_PREDICTED = "getPredictedEvents" in PointerEvent.prototype;
 const TAP_MS = 350;
 const TAP_SPREAD_MS = 120;   // fingers of a real two-finger tap land almost together
 const PALM_SIZE = 40;        // contact wider than this (CSS px) is a hand, not a fingertip
-const PALM_GUARD_MS = 800;   // finger taps this soon after the Pencil are treated as a resting hand
+const PALM_GUARD_MS = 800;
+const HOLD_PICK_MS = 550;    // one fingertip held still this long picks the colour under it (iPad)   // finger taps this soon after the Pencil are treated as a resting hand
 
 export class BoardView {
   // hooks: onChange(layerName, { cleared }), onPick(colour), onActive(layerName)
@@ -67,7 +68,12 @@ export class BoardView {
     this.predictCtx = this.predictCanvas.getContext("2d");
     this.guideCanvas = make("guides");
     this.guideCtx = this.guideCanvas.getContext("2d");
-    this.history.clear();
+    forgetHistory();
+  }
+
+  // A new project: every board's undo history goes.
+  forgetHistory(boardId) {
+    forgetHistory(boardId);
   }
 
   showBoard(board, images) {
@@ -78,7 +84,7 @@ export class BoardView {
       if (images[name]) this.ctx[name].drawImage(images[name], 0, 0, this.w, this.h);
       this.applyLayerState(name);
     }
-    this.history.clear();
+    this.history = historyFor(board.id);
     this.drawGuides();
   }
 
@@ -227,6 +233,8 @@ export class BoardView {
     if (e.pointerType === "pen") {
       this.penSeen = true;
       this.lastPen = e.timeStamp;
+      this.lastPenNow = performance.now();
+      clearTimeout(this.holdTimer);
       // Any fingers already down are the drawing hand resting: drop them so they can't pan the board.
       for (const id of this.touches.keys()) this.ignored.add(id);
       this.touches.clear();
@@ -251,7 +259,10 @@ export class BoardView {
 
   move(e) {
     if (e.pointerType === "touch") return this.touchMove(e);
-    if (e.pointerType === "pen") this.lastPen = e.timeStamp;
+    if (e.pointerType === "pen") {
+      this.lastPen = e.timeStamp;
+      this.lastPenNow = performance.now();
+    }
     const a = this.action;
     if (a && a.id !== e.pointerId && e.buttons && !a.mismatch) {
       a.mismatch = true;   // note it once per stroke
@@ -311,17 +322,20 @@ export class BoardView {
     }
   }
 
+  // Returns true when a colour was found under the point.
   pick(e) {
+    this.viewRect = this.view.getBoundingClientRect();
     const { x, y } = this.toBoard(e.clientX, e.clientY);
-    if (x < 0 || y < 0 || x >= this.w || y >= this.h) return;
+    if (x < 0 || y < 0 || x >= this.w || y >= this.h) return false;
     for (const name of [...LAYERS].reverse()) {
       if (!this.layerState[name].visible) continue;
       const d = this.ctx[name].getImageData(Math.floor(x), Math.floor(y), 1, 1).data;
       if (d[3] > 16) {
         this.hooks.onPick("#" + [d[0], d[1], d[2]].map((n) => n.toString(16).padStart(2, "0")).join(""));
-        return;
+        return true;
       }
     }
+    return false;
   }
 
   // ---------- strokes ----------
@@ -510,6 +524,18 @@ export class BoardView {
     if (Math.max(e.width || 0, e.height || 0) > PALM_SIZE) this.gesture.palm = true;
     this.gesture.max = Math.max(this.gesture.max, this.touches.size);
     this.gestureBase();
+    // Colour pick on the iPad: touch and hold one fingertip on a mark.
+    clearTimeout(this.holdTimer);
+    if (this.touches.size === 1 && !this.gesture.palm) {
+      const g = this.gesture;
+      this.holdTimer = setTimeout(() => {
+        if (this.gesture !== g || g.moved || g.max !== 1 || performance.now() - this.lastPenNow < PALM_GUARD_MS) return;
+        const [t] = this.touches.values();
+        g.picked = true;
+        note("  touch and hold: colour pick");
+        if (!this.pick({ clientX: t.x, clientY: t.y })) this.hooks.onPick(null);
+      }, HOLD_PICK_MS);
+    }
   }
 
   gestureBase() {
@@ -551,6 +577,7 @@ export class BoardView {
   }
 
   touchUp(e) {
+    clearTimeout(this.holdTimer);
     if (this.ignored.delete(e.pointerId)) return;
     if (!this.touches.delete(e.pointerId) || !this.gesture) return;
     const g = this.gesture;

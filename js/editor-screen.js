@@ -86,6 +86,7 @@ export async function openProject(p) {
   board = null;
   $("project-title").textContent = p.title;
   view.setSize(BOARD_WIDTH, boardHeight(p.ratio));
+  view.forgetHistory();
   for (const url of thumbs.values()) URL.revokeObjectURL(url);
   thumbs.clear();
   await Promise.all(p.boards.map(async (b) => {
@@ -166,6 +167,7 @@ async function deleteCurrent() {
   dirty.clear();
   board = null;
   removeBoard(project, gone);
+  view.forgetHistory(gone.id);
   await db.deleteBoardData(gone.id);
   dropThumb(gone.id);
   edited();
@@ -477,12 +479,15 @@ function changeSize(delta) {
   setTool(toolId);
 }
 
+// hex null: nothing drawn under the point (touch-and-hold on blank paper).
 function pickedColour(hex) {
   const def = TOOLS.find((t) => t.id === toolId);
-  if (!def || !def.colors.length) return toast("Pick a drawing tool first, then hold I and click a colour.");
+  if (!def || !def.colors.length) return toast("Choose a drawing tool first, then pick a colour (iPad: touch and hold a mark; Mac: hold I and click).");
+  if (!hex) return toast("No colour there — touch and hold on a mark.");
   settings[toolId].color = hex;
   saveToolSettings(settings);
   setTool(toolId);
+  toast("Colour picked", 1200);
 }
 
 // Mac keys, matching Storyboarder 3.0's key map (read from the installed app, 2026-10-24). Cmd-K lists them.

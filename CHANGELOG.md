@@ -1,5 +1,11 @@
 # Changelog
 
+## 2026-11-17 — Storyboard v0.16.0 (leftovers)
+- Undo now survives switching boards: each board keeps its own undo history while the project is open. Go back to a board and Undo takes back what you last did there. Leaving the project, or a very long session, clears the oldest steps.
+- iPad colour pick: touch and hold one fingertip on a mark for about half a second. The current drawing tool takes that colour ("Colour picked"). On blank paper it says there's no colour there. A quick tap or a resting hand doesn't pick.
+- Contact sheet PDF: *Only these shots* — print single shots from the ticked scenes, e.g. `3, 4b, 7-9`, or `12/3` for Kohtaus 12, Kuva 3. Empty prints them all, as before.
+- Contact sheet PDF: act dividers print in front of the scene heading they come before ("ACT 1 · 1. INT. KEITTIÖ – PÄIVÄ").
+
 ## 2026-11-17 — Storyboard v0.15.1
 - iPhone: after turning the phone back upright, the top bar (with *‹ Projects*) no longer slides under the clock and Wi-Fi symbols.
 

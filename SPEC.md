@@ -114,7 +114,7 @@ Storyboarder's set [verified: light pencil, pencil, pen, brush, eraser, note pen
 - Three sizes per tool, five colours per tool; greys by default, red for the note pen.
 - Straight line: hold Shift (Mac). On iPad: a straight-line toggle in the tool column.
 - Move / scale layer contents: Cmd-drag / Cmd-Option-drag on Mac [verified as Storyboarder shortcuts]; a move/scale tool on iPad.
-- Colour pick: Option (Mac), long-press on iPad.
+- Colour pick: hold I and click (Mac; Alt is the quick eraser), touch and hold one fingertip on a mark (iPad).
 - Undo/redo: Cmd-Z / Cmd-Y on Mac; two-finger tap = undo, three-finger tap = redo on iPad.
 - Brush size: `[` and `]`.
 - Clear layer: Delete/Backspace, with a confirm on iPad.

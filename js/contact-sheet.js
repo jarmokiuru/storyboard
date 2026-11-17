@@ -20,7 +20,7 @@ const FIELDS = [
 
 export const DEFAULTS = {
   kind: "boards", perPage: "6", custom: "", paper: "A4", orientation: "landscape",
-  fields: FIELDS.map((f) => f[0]), scenes: null, newScenePage: true, draft: false, blankPages: "1",
+  fields: FIELDS.map((f) => f[0]), scenes: null, only: "", newScenePage: true, draft: false, blankPages: "1",
 };
 
 const DPI = 200;            // picture resolution in the PDF
@@ -45,6 +45,7 @@ export async function askOptions(project, preset = {}) {
     { name: "paper", label: "Paper", type: "select", value: o.paper, options: ["A4", "Letter"] },
     { name: "orientation", label: "Orientation", type: "select", value: o.orientation, options: [["landscape", "Landscape"], ["portrait", "Portrait"]] },
     { name: "scenes", label: "Scenes", type: "checklist", value: o.scenes ? o.scenes.filter((id) => sceneIds.includes(id)) : sceneIds, options: project.scenes.map((s) => [s.id, heading(s)]) },
+    { name: "only", label: "Only these shots in the ticked scenes (empty = all), e.g. 3, 4b, 7-9 — or 12/3 for Kohtaus 12, Kuva 3", value: o.only || "" },
     { name: "fields", label: "Under each frame", type: "checklist", value: o.fields, options: FIELDS },
     { name: "newScenePage", label: "Start each scene on a new page", type: "checkbox", value: o.newScenePage },
     { name: "draft", label: "DRAFT mark", type: "checkbox", value: o.draft },
@@ -55,6 +56,18 @@ export async function askOptions(project, preset = {}) {
     toast("Tick at least one scene.");
     return null;
   }
+  v.only = v.only.trim();
+  if (v.kind === "boards" && v.only) {
+    const picked = chosenBoards(project, v.scenes, v.only);
+    if (!picked) {
+      toast("Write the shots like 3, 4b, 7-9 or 12/3, separated by commas.", 5000);
+      return null;
+    }
+    if (!picked.length) {
+      toast("None of those shots are in the ticked scenes.", 5000);
+      return null;
+    }
+  }
   if (v.perPage === "custom" && !parseCustom(v.custom)) {
     toast("Write the custom grid as rows x columns, e.g. 3x4.");
     return null;
@@ -63,6 +76,36 @@ export async function askOptions(project, preset = {}) {
   if (v.scenes.length === sceneIds.length) v.scenes = null;
   return v;
 }
+
+// The boards to print: the ticked scenes, narrowed by the "only these shots" list. Null when the list can't be read.
+//   3      every board of Kuva 3 (3, 3b, 3c…)     4b    just that board
+//   7-9    Kuva 7 to 9                            12/3  Kohtaus 12, Kuva 3 (also 12/3b, 12/7-9)
+export function chosenBoards(project, sceneIds, only) {
+  const chosen = sceneIds ? new Set(sceneIds) : null;
+  const boards = orderedBoards(project).filter((b) => !chosen || chosen.has(b.sceneId));
+  if (!only || !only.trim()) return boards;
+  const rules = [];
+  for (const part of only.split(/[,;]+/).map((t) => t.trim()).filter(Boolean)) {
+    const m = part.match(/^(?:([^/\s]+)\s*\/\s*)?([^\s/–-]+)(?:\s*[-–]\s*([^\s/–-]+))?$/);
+    if (!m) return null;
+    rules.push({ scene: m[1] ? norm(m[1]) : null, from: norm(m[2]), to: m[3] ? norm(m[3]) : null });
+  }
+  return boards.filter((b) => {
+    const label = norm(boardLabel(project, b));
+    const kuva = norm(b.kuva);
+    const kohtaus = norm(sceneOf(project, b)?.kohtaus || "");
+    return rules.some((r) => {
+      if (r.scene !== null && r.scene !== kohtaus) return false;
+      if (r.to !== null) {
+        const n = parseFloat(kuva), a = parseFloat(r.from), z = parseFloat(r.to);
+        return [n, a, z].every(Number.isFinite) && n >= Math.min(a, z) && n <= Math.max(a, z);
+      }
+      return r.from === kuva || r.from === label;
+    });
+  });
+}
+
+const norm = (s) => String(s).trim().toLowerCase();
 
 function parseCustom(s) {
   const m = String(s).match(/^\s*(\d+)\s*[x×*]\s*(\d+)\s*$/i);
@@ -194,7 +237,12 @@ async function boardJpeg(board, w, h) {
 function boardText(project, b, firstOfScene, o, L) {
   const f = new Set(o.fields);
   const out = [];
-  if (f.has("heading") && firstOfScene) out.push({ str: fit(heading(sceneOf(project, b)), L.fw, L.fs, "bold"), font: "bold" });
+  if (f.has("heading") && firstOfScene) {
+    // An act divider (e.g. "ACT 1") goes in front of the heading of the scene it comes before.
+    const scene = sceneOf(project, b);
+    const act = (scene.actBefore || "").trim();
+    out.push({ label: act ? act.toUpperCase() + "  ·" : "", str: heading(scene), font: "bold" });
+  }
   const label = f.has("kuva") ? boardLabel(project, b) : "";
   const meta = [f.has("kuvakoko") && b.kuvakoko, f.has("lens") && b.lens, f.has("movement") && b.movement].filter(Boolean).join(" · ");
   if (label || meta) out.push({ label, str: meta });
@@ -224,8 +272,7 @@ export async function makeContactSheet(project, o) {
     return pdf.toBlob();
   }
 
-  const chosen = o.scenes ? new Set(o.scenes) : null;
-  const boards = orderedBoards(project).filter((b) => !chosen || chosen.has(b.sceneId));
+  const boards = chosenBoards(project, o.scenes, o.only);
   const pages = paginate(boards, perPage, o.newScenePage);
   const pxW = Math.min(2048, Math.round((L.fw / 72) * DPI));
   const pxH = Math.round(pxW / project.ratio);
