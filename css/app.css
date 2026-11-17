@@ -464,7 +464,9 @@ button:active:not(:disabled) { transform: translateY(1px); }
 
 /* ---------- iPhone viewing (js/viewer-screen.js) ---------- */
 
-#viewer-screen { height: 100%; display: flex; flex-direction: column; }
+/* Pinned to the screen: after turning the phone back upright, iOS can leave the page shifted up so the bar
+   sits under the clock; a fixed screen can't be shifted. */
+#viewer-screen { position: fixed; inset: 0; display: flex; flex-direction: column; }
 #viewer-screen .title { font-weight: 600; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 #v-main { flex: 1; min-height: 0; display: flex; flex-direction: column; }
 #v-frame-area { flex: none; padding: 10px; padding-left: max(10px, env(safe-area-inset-left)); padding-right: max(10px, env(safe-area-inset-right)); background: var(--surround); touch-action: pan-y; -webkit-user-select: none; user-select: none; }

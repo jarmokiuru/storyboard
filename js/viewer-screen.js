@@ -35,6 +35,10 @@ export function initViewer({ exit }) {
     go(Number(t.dataset.i));
   });
   swipe($("v-frame-area"));
+  // Turning the phone can leave the page scrolled; put it back so the bar stays below the clock.
+  const settle = () => { if (!$("viewer-screen").hidden) setTimeout(() => window.scrollTo(0, 0), 300); };
+  window.addEventListener("orientationchange", settle);
+  window.addEventListener("resize", settle);
   document.addEventListener("keydown", (e) => {
     if ($("viewer-screen").hidden) return;
     if (e.key === "ArrowRight" || e.key === "ArrowDown") go(index + 1);

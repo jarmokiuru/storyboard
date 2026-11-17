@@ -1,5 +1,8 @@
 # Changelog
 
+## 2026-11-17 — Storyboard v0.15.1
+- iPhone: after turning the phone back upright, the top bar (with *‹ Projects*) no longer slides under the clock and Wi-Fi symbols.
+
 ## 2026-11-15 — Storyboard v0.15.0 (iPhone viewing)
 - On the iPhone a project opens in a viewer instead of the board editor: one board at a time, big, with the scene heading, Kuva #, Kuvakoko · Lens · Movement and the Sisältö, dialogue, action and notes underneath.
 - Swipe left or right, or tap the frame's left or right edge, to move between boards; ‹ › buttons do the same. Tap the middle of the frame for the frame alone; tap again to bring the details back.
