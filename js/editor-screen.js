@@ -6,6 +6,7 @@ import {
   insertBoardAfter, insertBoardBefore, toggleNewShot, nudgeBoard, duplicateBoard, removeBoard, moveBoard, moveBoardToScene, addScene, removeScene, newScene, nextSceneNumber,
 } from "./model.js";
 import { TOOLS, MOVE, loadToolSettings, saveToolSettings } from "./brush.js";
+import { drawSample } from "./tool-samples.js";
 import { BoardView } from "./board-view.js";
 import { initStrip, renderStrip, setCurrent, setThumb, scrollToBoard } from "./strip.js";
 import { initPanel, fillPanel, updateLabel, renderLayers, togglePanel } from "./panel.js";
@@ -417,10 +418,13 @@ function buildTools() {
     const b = document.createElement("button");
     b.dataset.tool = def.id;
     b.textContent = def.short;
+    if (def.sizes) b.append(Object.assign(document.createElement("canvas"), { className: "sample" }));
     b.title = `${def.label} (${def.key.toUpperCase()})`;
     b.onclick = () => setTool(def.id);
     grid.append(b);
   }
+  // The column's width settles after layout (and changes with the screen), so redraw the samples to fit it.
+  new ResizeObserver(() => drawSamples()).observe(grid);
   $("straight").onclick = () => {
     view.straight = !view.straight;
     $("straight").classList.toggle("on", view.straight);
@@ -467,8 +471,17 @@ function setTool(id) {
     }
   }
   view.tool = def ? { def, size: def.sizes[settings[id].size], color: settings[id].color } : { def: MOVE };
+  drawSamples();
   const eraser = TOOLS.find((t) => t.id === "eraser");
   view.quickEraser = { def: eraser, size: eraser.sizes[settings.eraser.size], color: "#000" };
+}
+
+// The sample stroke on each tool button, in that tool's chosen colour and size.
+function drawSamples() {
+  for (const t of TOOLS) {
+    const c = $("tools").querySelector(`[data-tool="${t.id}"] canvas.sample`);
+    if (c && c.clientWidth) drawSample(c, t, t.sizes[settings[t.id].size], settings[t.id].color);
+  }
 }
 
 function changeSize(delta) {

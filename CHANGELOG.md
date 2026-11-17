@@ -1,5 +1,8 @@
 # Changelog
 
+## 2026-11-17 — Storyboard v0.18.0 (tool samples)
+- Each drawing tool's button shows a small sample stroke under its name, drawn with the tool itself in its current colour and size: the Pencil tipped over in the middle (tilt widens the soft tools) and a quick flick at the end (speed thins it). The eraser shows a cut through grey. The samples change when you pick another colour or size.
+
 ## 2026-11-17 — Storyboard v0.17.1
 - Shot Generator: Cmd-B, Cmd-D and Cmd-K now work right after typing in one of the panel's number boxes (e.g. the elevation); before, the keys stayed in the box and nothing happened.
 
