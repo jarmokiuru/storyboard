@@ -12,8 +12,9 @@ const HAS_PREDICTED = "getPredictedEvents" in PointerEvent.prototype;
 const TAP_MS = 350;
 const TAP_SPREAD_MS = 120;   // fingers of a real two-finger tap land almost together
 const PALM_SIZE = 40;        // contact wider than this (CSS px) is a hand, not a fingertip
-const PALM_GUARD_MS = 800;
-const HOLD_PICK_MS = 550;    // one fingertip held still this long picks the colour under it (iPad)   // finger taps this soon after the Pencil are treated as a resting hand
+const PALM_GUARD_MS = 800;   // finger taps this soon after the Pencil are treated as a resting hand
+const HOLD_PICK_MS = 550;    // one fingertip held still this long picks the colour under it (iPad)
+const HOLD_MAX_SIZE = 100;   // a held finger reads wider than a tap (Jarmo's iPad: over 40); a palm reads ~146
 
 export class BoardView {
   // hooks: onChange(layerName, { cleared }), onPick(colour), onActive(layerName)
@@ -521,15 +522,18 @@ export class BoardView {
     this.touches.set(e.pointerId, { x: e.clientX, y: e.clientY });
     if (!this.gesture) this.gesture = { start: e.timeStamp, max: 0, moved: false, palm: false, spread: 0 };
     else this.gesture.spread = Math.max(this.gesture.spread, e.timeStamp - this.gesture.start);
-    if (Math.max(e.width || 0, e.height || 0) > PALM_SIZE) this.gesture.palm = true;
+    const size = Math.max(e.width || 0, e.height || 0);
+    if (size > PALM_SIZE) this.gesture.palm = true;
+    this.gesture.size = Math.max(this.gesture.size || 0, size);
     this.gesture.max = Math.max(this.gesture.max, this.touches.size);
     this.gestureBase();
     // Colour pick on the iPad: touch and hold one fingertip on a mark.
     clearTimeout(this.holdTimer);
-    if (this.touches.size === 1 && !this.gesture.palm) {
+    if (this.touches.size === 1 && this.gesture.size <= HOLD_MAX_SIZE) {
       const g = this.gesture;
       this.holdTimer = setTimeout(() => {
-        if (this.gesture !== g || g.moved || g.max !== 1 || performance.now() - this.lastPenNow < PALM_GUARD_MS) return;
+        if (this.gesture !== g || g.moved || g.max !== 1) return;
+        if (performance.now() - this.lastPenNow < PALM_GUARD_MS) return note("  touch and hold: not picked (Pencil used just before)");
         const [t] = this.touches.values();
         g.picked = true;
         note("  touch and hold: colour pick");

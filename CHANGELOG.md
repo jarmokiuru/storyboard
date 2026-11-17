@@ -1,5 +1,9 @@
 # Changelog
 
+## 2026-11-17 — Storyboard v0.16.1
+- iPad colour pick works with a held finger: the iPad reports a held fingertip as wider than a tap, and v0.16.0 took it for a resting hand. A palm still doesn't pick.
+- Pencil log: wide touches now show their size ("up to 64 px wide") instead of "cancelled by the iPad".
+
 ## 2026-11-17 — Storyboard v0.16.0 (leftovers)
 - Undo now survives switching boards: each board keeps its own undo history while the project is open. Go back to a board and Undo takes back what you last did there. Leaving the project, or a very long session, clears the oldest steps.
 - iPad colour pick: touch and hold one fingertip on a mark for about half a second. The current drawing tool takes that colour ("Colour picked"). On blank paper it says there's no colour there. A quick tap or a resting hand doesn't pick.

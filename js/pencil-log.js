@@ -1,14 +1,14 @@
 // Pencil log: the last pointer events on the board, for tracking down strokes that never appear.
 // Opened from Guides → Pencil log…; Jarmo copies it into the chat after a missed stroke.
-// Large contacts the iPad itself cancels (a resting hand, a grip on the edge) arrive about 60 times a
-// second, so they're folded into one summary line instead of filling the log.
+// Large contacts (a resting hand, a grip on the edge, a finger pressed flat) can arrive about 60 times a
+// second, so they're folded into one summary line, with the widest size, instead of filling the log.
 
 const MAX_LINES = 300;
 const BIG = 40;            // CSS px: wider than a fingertip
 const lines = [];
 const moves = new Map();   // pointer id → moves since its pointerdown
 const big = new Set();     // ids of large contacts currently down
-let folded = { count: 0, spots: new Set(), since: 0 };
+let folded = { count: 0, spots: new Set(), since: 0, size: 0 };
 let start = null;
 
 const now = () => {
@@ -24,8 +24,8 @@ function push(text, t = now()) {
 
 function flushFolded() {
   if (!folded.count) return;
-  push(`(${folded.count} large touches at ${[...folded.spots].join(" and ")} — cancelled by the iPad)`, folded.since);
-  folded = { count: 0, spots: new Set(), since: 0 };
+  push(`(${folded.count} large touches, up to ${folded.size} px wide, at ${[...folded.spots].join(" and ")})`, folded.since);
+  folded = { count: 0, spots: new Set(), since: 0, size: 0 };
 }
 
 export function note(text) {
@@ -56,6 +56,7 @@ export function watch(el) {
       big.add(e.pointerId);
       if (!folded.count) folded.since = now();
       folded.count++;
+      folded.size = Math.max(folded.size, Math.round(Math.max(e.width || 0, e.height || 0)));
       folded.spots.add(`${Math.round(e.clientX / 10) * 10},${Math.round(e.clientY / 10) * 10}`);
       return;
     }
