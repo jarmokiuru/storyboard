@@ -1,5 +1,10 @@
 # Changelog
 
+## 2026-11-18 — Storyboard v0.23.1 (looser clothes, grey extras)
+- Clothes sit looser, about 2 cm off the body, and the body under them is smoothed, strongly around the crotch and seat, so nothing anatomical shows through.
+- Sleeves end in a straight cuff at the wrist, and trousers in a straight hem above clearly visible shoes.
+- Figures without a name (extras) wear grey shirts in a few light shades, so the named characters stand out. Naming a figure gives it its character's colour; clearing the name turns it grey again. Its panel offers greys instead of colours.
+
 ## 2026-11-18 — Storyboard v0.23.0 (clothes on the figures)
 - Every figure wears plain clothes: a long-sleeved shirt in the character's colour, grey trousers and dark shoes. Head, neck and hands stay a light clay skin.
 - The clothes move with every pose and with dragging the limbs. They stand slightly off the body and add nothing to draw, so the 2017 Mac is no slower.
