@@ -11,12 +11,15 @@ export const CLOTH = { skin: "#d6d1c9", trousers: "#62666d", shoes: "#2f3135" };
 
 // How far each part stands off the body, as a share of the figure's height (1.8 m figure: about 2 cm), so the
 // clothes sit a little loose rather than skin-tight (Jarmo, 2026-11-18).
-const OUT = [0, 0.011, 0.012, 0.02];   // skin, shirt, trousers, shoes (shoes stand proud of the trouser hems)
+const OUT = [0, 0.016, 0.018, 0.026];   // skin, shirt, trousers, shoes (shoes stand proud of the trouser hems)
 
 // Smoothing passes under the clothes: a few everywhere (loose cloth hides the body's detail), many more around the
 // crotch and seat so nothing anatomical shows through.
-const SMOOTH = 4;
+const SMOOTH = 8;
 const SMOOTH_CROTCH = 24;
+// The crotch is then filled in like a stretched sheet: no fold between the thighs, the same neutral shape on every
+// body (Jarmo, 2026-11-18). Passes of plain smoothing, strongest at the middle of the zone.
+const SHEET = 120;
 
 function partOf(bone) {
   if (/Foot|ToeBase|^leaf01[12]$/.test(bone)) return 3;
@@ -76,6 +79,16 @@ export function dress(root) {
     const waist = hips != null && spine != null ? spine + (spine - hips) * 0.2 : g.boundingBox.min.y + height * 0.55;
     const collar = neck != null && head != null ? neck + (head - neck) * 0.05 : g.boundingBox.min.y + height * 0.83;
     const crotchLow = (hips ?? g.boundingBox.min.y + height * 0.5) - height * 0.12;
+    // The sheet zone: centred between the hip joints, from the crotch down the inner thighs, front to back.
+    const legL = boneAt("LeftUpLeg"), legR = boneAt("RightUpLeg");
+    const midX = legL && legR ? (legL.x + legR.x) / 2 : 0;
+    const legY = legL && legR ? (legL.y + legR.y) / 2 : (hips ?? g.boundingBox.min.y + height * 0.5);
+    const sheetAt = (x, y) => {
+      const ax = Math.abs(x - midX) / (height * 0.085);
+      const ay = (y - (legY - height * 0.05)) / (height * (y < legY - height * 0.05 ? 0.07 : 0.09));
+      const r = ax * ax + ay * ay;
+      return r >= 1 ? 0 : (1 - r) * (1 - r);
+    };
 
     // 1. Which part each vertex belongs to.
     const part = new Uint8Array(pos.count);
@@ -119,11 +132,13 @@ export function dress(root) {
     const P = new Float32Array(count * 3);
     const passes = new Uint8Array(count);
     const fixed = new Uint8Array(count);
+    const sheet = new Float32Array(count);
     for (let v = 0; v < pos.count; v++) {
       const u = id[v];
       P[u * 3] = pos.getX(v); P[u * 3 + 1] = pos.getY(v); P[u * 3 + 2] = pos.getZ(v);
       if (part[v] === 0 || part[v] === 3) fixed[u] = 1;
       else passes[u] = Math.max(passes[u], part[v] === 2 && restY[v] > crotchLow && restY[v] < waist ? SMOOTH_CROTCH : SMOOTH);
+      if (part[v] === 2) sheet[u] = Math.max(sheet[u], sheetAt(pos.getX(v), restY[v]));
     }
     const near = Array.from({ length: count }, () => new Set());
     const idx = g.index.array;
@@ -144,6 +159,20 @@ export function dress(root) {
       }
       P.set(next);
     };
+    // The sheet first: plain smoothing (no step back out), so the fold between the thighs fills in.
+    for (let pass = 0; pass < SHEET; pass++) {
+      const next = P.slice();
+      for (let u = 0; u < count; u++) {
+        if (!sheet[u] || fixed[u]) continue;
+        let x = 0, y = 0, z = 0;
+        for (const n of near[u]) { x += P[n * 3]; y += P[n * 3 + 1]; z += P[n * 3 + 2]; }
+        const k = near[u].size, f = 0.6 * sheet[u];
+        next[u * 3] += f * (x / k - P[u * 3]);
+        next[u * 3 + 1] += f * (y / k - P[u * 3 + 1]);
+        next[u * 3 + 2] += f * (z / k - P[u * 3 + 2]);
+      }
+      P.set(next);
+    }
     for (let pass = 0; pass < SMOOTH_CROTCH; pass++) { step(0.5, pass); step(-0.53, pass); }
 
     // 3. Shading follows the smoothed shape: normals from the faces, shared by the welded copies.

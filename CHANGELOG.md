@@ -1,5 +1,9 @@
 # Changelog
 
+## 2026-11-18 — Storyboard v0.23.2 (neutral crotch, more relaxed clothes)
+- The crotch is filled in like a stretched sheet of cloth on every body, so there is no fold or shape between the thighs. Female, male, teen and child figures all read the same there.
+- Clothes are more relaxed: they stand about 3 cm off the body, and the body under them is smoothed twice as much, so less of the figure's build shows through.
+
 ## 2026-11-18 — Storyboard v0.23.1 (looser clothes, grey extras)
 - Clothes sit looser, about 2 cm off the body, and the body under them is smoothed, strongly around the crotch and seat, so nothing anatomical shows through.
 - Sleeves end in a straight cuff at the wrist, and trousers in a straight hem above clearly visible shoes.
