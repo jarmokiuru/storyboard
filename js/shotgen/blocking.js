@@ -67,16 +67,14 @@ export function removeFigure(project, scene, id) {
 
 export const named = (name) => !!(name && name.trim() && name.trim() !== "?");
 
-// Figures without a name (extras, passers-by) wear greys, not colours, so the named characters stand out
-// (Jarmo, 2026-11-18). A few shades, so neighbours can still be told apart.
-export const EXTRA_GREYS = ["#b4b6ba", "#9a9da2", "#c8cacd", "#a7a9ad", "#8d9095", "#d4d5d7"];   // all lighter than the trousers
-const isGrey = (c) => EXTRA_GREYS.includes(c);
-const greyFor = (id) => EXTRA_GREYS[[...String(id)].reduce((h, ch) => (h * 31 + ch.charCodeAt(0)) >>> 0, 7) % EXTRA_GREYS.length];
+// Figures without a name (extras, passers-by) wear no colour at all: one plain clay all over — shirt, trousers, shoes
+// and skin alike — so only the named characters carry colour (Jarmo, 2026-11-18; replaces the greys of v0.23.1).
+export const PLAIN = "#d6d1c9";   // the clay skin colour (clothes.js CLOTH.skin)
 
 // The character's colour; a character without one gets the first colour no other character uses, kept in the project.
-// An unnamed figure gets a grey (its own, if it already has one).
-export function colourFor(project, name, fallback, id = "") {
-  if (!named(name)) return isGrey(fallback) ? fallback : greyFor(id || Math.random());
+// An unnamed figure is plain.
+export function colourFor(project, name) {
+  if (!named(name)) return PLAIN;
   project.characters = project.characters || [];
   let c = project.characters.find((x) => x.name === name.trim());
   if (!c) {
@@ -98,7 +96,7 @@ export function setCharacterColour(project, name, colour) {
 
 // Every figure named after a character takes the character's colour (all scenes, all boards' own copies).
 export function syncColours(project) {
-  const paint = (f) => { f.colour = colourFor(project, f.name, f.colour, f.id); };
+  const paint = (f) => { f.colour = colourFor(project, f.name); };
   for (const s of project.scenes) for (const f of s.blocking?.figures || []) paint(f);
   for (const b of project.boards) for (const f of Object.values(b.ownFigures || {})) paint(f);
 }

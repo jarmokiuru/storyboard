@@ -1,5 +1,9 @@
 # Changelog
 
+## 2026-11-18 — Storyboard v0.23.4 (plain extras)
+- Figures without a name are plain clay all over again, with no shirt, trouser or shoe colours. Only named characters wear colours and clothes.
+- An unnamed figure's panel shows no colour swatches. Naming the figure gives it the character's colour and clothes; clearing the name makes it plain again.
+
 ## 2026-11-18 — Storyboard v0.23.3 (original fit, neutral crotch kept)
 - Clothes are back to the v0.23.1 fit, so the figures no longer look heavier. The neutral crotch from v0.23.2 stays.
 

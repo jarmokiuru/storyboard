@@ -3,9 +3,10 @@
 // legs → trousers, feet → shoes; head, neck and hands stay skin); on the torso a level waist and collar decide instead.
 // Under the clothes the body is smoothed (strongly around the crotch) and the clothes sit loose. The colours are chosen per pixel in the shader, from
 // those parts blended across each triangle, so the edges run straight instead of following the body's long triangles.
-// The shirt wears the character's colour; trousers and shoes are clay greys.
+// The shirt wears the character's colour; trousers and shoes are clay greys. A figure without a name is plain clay all over.
 
 import * as THREE from "three";
+import { PLAIN } from "./blocking.js";
 
 export const CLOTH = { skin: "#d6d1c9", trousers: "#62666d", shoes: "#2f3135" };
 
@@ -216,6 +217,7 @@ export function outfit(colour, cut) {
     clothShirt: { value: new THREE.Color(colour) },
     clothTrousers: { value: new THREE.Color(CLOTH.trousers) },
     clothShoes: { value: new THREE.Color(CLOTH.shoes) },
+    clothPlain: { value: 0 },   // 1: one colour all over (figures without a name)
     clothWaist: { value: cut?.waist ?? 0 },
     clothCollar: { value: cut?.collar ?? 1e9 },
   };
@@ -244,6 +246,7 @@ uniform vec3 clothTrousers;
 uniform vec3 clothShoes;
 uniform float clothWaist;
 uniform float clothCollar;
+uniform float clothPlain;
 varying vec4 vClothPart;
 varying float vClothTorso;
 varying float vClothY;
@@ -260,10 +263,15 @@ varying vec2 vClothLimb;`)
   if (p.y > best) { best = p.y; c = clothShirt; }
   if (p.z > best) { best = p.z; c = clothTrousers; }
   if (p.w > best) { best = p.w; c = clothShoes; }
+  if (clothPlain > 0.5) c = clothSkin;
   diffuseColor.rgb *= c;
 }`);
   };
   mat.customProgramCacheKey = () => "storyboard-clothes";
-  mat.paint = (c) => uniforms.clothShirt.value.set(c);
+  mat.paint = (c) => {
+    uniforms.clothPlain.value = c === PLAIN ? 1 : 0;
+    uniforms.clothShirt.value.set(c);
+  };
+  mat.paint(colour);
   return mat;
 }

@@ -7,7 +7,7 @@ import { OBJECTS, FIGURES, FIGURE_COLOURS, byId } from "./catalog.js";
 import { POSES, POSE_ORDER, JOINTS } from "./poses.js";
 import { openMenu, formDialog } from "../ui.js";
 import { uid, sceneOf } from "../model.js";
-import { sceneBlocking, isOwn, setOwn, removeFigure, colourFor, setCharacterColour, syncColours, named, EXTRA_GREYS } from "./blocking.js";
+import { sceneBlocking, isOwn, setOwn, removeFigure, colourFor, setCharacterColour, syncColours, named, PLAIN } from "./blocking.js";
 
 const $ = (id) => document.getElementById(id);
 const rad = (d) => (d * Math.PI) / 180;
@@ -117,7 +117,7 @@ async function figureDialog(name) {
   const fig = {
     id, kind: "figure", model: v.model, name: v.name.trim() || "?",
     height: Math.max(30, Math.min(230, num(v.height, entry.height))),
-    colour: colourFor(ctx.project, v.name, null, id),
+    colour: colourFor(ctx.project, v.name),
     ...at, rot: faceCamera(at.x, at.z),
   };
   sceneBlocking(ctx.project, ctx.scene).figures.push(fig);   // the scene's, so every board has it
@@ -170,7 +170,6 @@ export async function duplicateSelected() {
   copy.id = uid();
   copy.x = Math.round((it.x + 0.5) * 100) / 100;
   if (it.kind === "figure") {
-    if (!named(copy.name)) copy.colour = colourFor(ctx.project, copy.name, null, copy.id);   // another grey for another extra
     if (copy.lookAt && copy.lookAt !== "camera" && copy.lookAt !== "point") copy.lookAt = it.lookAt;
     sceneBlocking(ctx.project, ctx.scene).figures.push(copy);
     ctx.figures.push(copy);
@@ -229,7 +228,7 @@ function showSelected() {
     ${isFig
       ? `<label class="sg-own" title="On: this board keeps its own position and pose for this figure; the other boards don't follow. Off: shared with every board of the scene."><input type="checkbox" data-f="own"> This board only</label>
          <label><span>Name</span><input data-f="name" autocomplete="off"></label>
-         <div><span class="muted sg-unit">${named(it.name) ? `Shirt colour (every ${it.name.trim()} in the project)` : "Shirt grey (figures without a name stay grey)"}</span><div class="sg-colours">${(named(it.name) ? FIGURE_COLOURS : EXTRA_GREYS).map((c) => `<button data-colour="${c}" style="background:${c}" aria-label="${c}"></button>`).join("")}</div></div>${numberRow("Height", "height", 30, 230, 1, "cm", byId(it.model).height)}
+         ${named(it.name) ? `<div><span class="muted sg-unit">Shirt colour (every ${it.name.trim()} in the project)</span><div class="sg-colours">${FIGURE_COLOURS.map((c) => `<button data-colour="${c}" style="background:${c}" aria-label="${c}"></button>`).join("")}</div></div>` : `<p class="muted sg-unit">No colour: figures without a name stay plain. Give it a name for a colour.</p>`}${numberRow("Height", "height", 30, 230, 1, "cm", byId(it.model).height)}
          <label><span>Pose</span><select data-f="pose">${POSE_ORDER.map((k) => `<option value="${k}">${POSES[k].label}</option>`).join("")}</select></label>
          <label><span>Looks at</span><select data-f="lookAt"><option value="">Where the pose looks</option><option value="camera">The lens</option>${it.lookAt === "point" ? '<option value="point">Where the head was dragged</option>' : ""}${others.map((f) => `<option value="${f.id}">${f.name}</option>`).join("")}</select></label>
          <p class="muted sg-unit">Drag the dots on the figure to pose it: hands and feet move the whole limb, the blue dot raises or lowers the hips, the white one turns the head.</p>
@@ -315,10 +314,9 @@ function showSelected() {
   }
   if (name) {
     name.oninput = () => { it.name = name.value; ctx.things.put(it); ctx.setChanged(); ctx.redraw(); };
-    // A finished name takes its character's colour (and shares it from then on).
-    // A finished name takes its character's colour; a name cleared back to nothing turns the figure grey.
+    // A finished name takes its character's colour; a name cleared back to nothing makes the figure plain again.
     name.onchange = () => {
-      it.colour = colourFor(ctx.project, it.name, named(it.name) ? it.colour : null, it.id);
+      it.colour = colourFor(ctx.project, it.name);
       syncColours(ctx.project);
       ctx.things.put(it);
       ctx.setChanged();
@@ -339,10 +337,9 @@ function showSelected() {
   box.querySelectorAll("[data-colour]").forEach((b) => {
     b.classList.toggle("on", b.dataset.colour === it.colour);
     b.onclick = () => {
-      if (named(it.name)) {
-        setCharacterColour(ctx.project, it.name, b.dataset.colour);
-        syncColours(ctx.project);
-      } else it.colour = b.dataset.colour;
+      if (!named(it.name)) return;
+      setCharacterColour(ctx.project, it.name, b.dataset.colour);
+      syncColours(ctx.project);
       for (const f of ctx.figures) ctx.things.put(f);
       ctx.setChanged();
       ctx.redraw();
