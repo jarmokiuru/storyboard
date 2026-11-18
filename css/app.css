@@ -557,5 +557,6 @@ fieldset.openings legend { color: var(--muted); font-size: 13px; padding: 0 4px;
 .sg-own { display: flex; align-items: center; gap: 8px; font-size: 13px; }
 .sg-colours { display: flex; flex-wrap: wrap; gap: 6px; }
 .sg-colours button { width: 26px; height: 26px; min-height: 0; padding: 0; border-radius: 50%; border: 2px solid transparent; }
+.sg-colours button[aria-label="Plain"] { border-color: #9a9ea6; }
 .sg-colours button.on { border-color: var(--accent); }
 #panel details.psec.buttons #shotgen-btn { grid-column: 1 / -1; }

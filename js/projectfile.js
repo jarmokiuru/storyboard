@@ -80,8 +80,10 @@ export function normalizeProject(raw) {
     room: readRoom(l.room),
   }));
   p.characters = (p.characters || []).filter((c) => c && c.name).map((c) => ({
-    name: String(c.name), model: c.model || "adult-male", height: Number(c.height) || null,
+    // model null: an entry the app made to hold a hand-picked colour (not cast); a starter's entry without a body is cast.
+    name: String(c.name), model: c.model === null ? null : c.model || "adult-male", height: Number(c.height) || null,
     ...(/^#[0-9a-f]{6}$/i.test(c.colour || "") ? { colour: c.colour } : {}),
+    ...(/^#[0-9a-f]{6}$/i.test(c.handColour || "") ? { handColour: c.handColour } : {}),
   }));
   if (Array.isArray(p.lenses)) p.lenses = p.lenses.map(Number).filter((n) => n > 0);
   else delete p.lenses;

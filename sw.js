@@ -2,7 +2,7 @@
 // With every release: change VERSION here and in js/version.js, and list any new file below
 // (the list can be rebuilt from the folders: js/, vendor/three/, vendor/models/).
 
-const VERSION = "0.23.4";
+const VERSION = "0.24.0";
 const CACHE = "storyboard-" + VERSION;
 const FILES = [
   "./",
@@ -40,7 +40,7 @@ const FILES = [
   "js/viewer-screen.js",
   "js/shotgen/blocking.js",
   "js/shotgen/catalog.js",
-  "js/shotgen/clothes.js",
+  "js/shotgen/neutral-body.js",
   "js/shotgen/framing.js",
   "js/shotgen/models.js",
   "js/shotgen/openings-editor.js",

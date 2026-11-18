@@ -67,20 +67,23 @@ export function removeFigure(project, scene, id) {
 
 export const named = (name) => !!(name && name.trim() && name.trim() !== "?");
 
-// Figures without a name (extras, passers-by) wear no colour at all: one plain clay all over — shirt, trousers, shoes
-// and skin alike — so only the named characters carry colour (Jarmo, 2026-11-18; replaces the greys of v0.23.1).
-export const PLAIN = "#d6d1c9";   // the clay skin colour (clothes.js CLOTH.skin)
+// Only the cast gets a colour of its own: the characters the project lists with a body (project.characters with a
+// model — from the starter file, e.g. Stig and Jian). Everyone else — extras, the press, speaking extras, figures
+// without a name — is plain clay, unless a colour is picked by hand in the figure's panel (Jarmo, 2026-11-18).
+//   character.colour       the cast member's colour (given by the project, or the first free one)
+//   character.handColour   picked by hand for that name, for cast and extras alike (PLAIN = picked plain)
+//   figure.handColour      picked by hand for one figure without a name
+// Entries the app adds just to hold a hand colour have model null, so they never count as cast.
+export const PLAIN = "#d6d1c9";
 
-// The character's colour; a character without one gets the first colour no other character uses, kept in the project.
-// An unnamed figure is plain.
-export function colourFor(project, name) {
-  if (!named(name)) return PLAIN;
-  project.characters = project.characters || [];
-  let c = project.characters.find((x) => x.name === name.trim());
-  if (!c) {
-    c = { name: name.trim(), model: null, height: null };
-    project.characters.push(c);
-  }
+const character = (project, name) => (project.characters || []).find((x) => x.name === name.trim());
+export const isCast = (project, name) => named(name) && !!character(project, name)?.model;
+
+export function colourFor(project, name, fig) {
+  if (!named(name)) return fig?.handColour || PLAIN;
+  const c = character(project, name);
+  if (c?.handColour) return c.handColour;
+  if (!c?.model) return PLAIN;
   if (!c.colour) {
     const used = new Set(project.characters.map((x) => x.colour).filter(Boolean));
     c.colour = FIGURE_COLOURS.find((x) => !used.has(x)) || FIGURE_COLOURS[project.characters.indexOf(c) % FIGURE_COLOURS.length];
@@ -88,15 +91,22 @@ export function colourFor(project, name) {
   return c.colour;
 }
 
-export function setCharacterColour(project, name, colour) {
-  if (!named(name)) return;
-  colourFor(project, name);
-  project.characters.find((x) => x.name === name.trim()).colour = colour;
+// A colour picked by hand: for every figure of that name, or for this one figure when it has no name.
+export function pickColour(project, fig, colour) {
+  if (!named(fig.name)) {
+    if (colour === PLAIN) delete fig.handColour;
+    else fig.handColour = colour;
+    return;
+  }
+  project.characters = project.characters || [];
+  let c = character(project, fig.name);
+  if (!c) project.characters.push((c = { name: fig.name.trim(), model: null, height: null }));
+  c.handColour = colour;
 }
 
-// Every figure named after a character takes the character's colour (all scenes, all boards' own copies).
+// Every figure takes its colour by the rules above (all scenes, all boards' own copies).
 export function syncColours(project) {
-  const paint = (f) => { f.colour = colourFor(project, f.name); };
+  const paint = (f) => { f.colour = colourFor(project, f.name, f); };
   for (const s of project.scenes) for (const f of s.blocking?.figures || []) paint(f);
   for (const b of project.boards) for (const f of Object.values(b.ownFigures || {})) paint(f);
 }

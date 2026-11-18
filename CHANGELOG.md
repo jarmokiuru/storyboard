@@ -1,5 +1,10 @@
 # Changelog
 
+## 2026-11-18 — Storyboard v0.24.0 (cast in colour, extras plain, no clothes)
+- Only the cast gets a colour: the characters the project lists with a body and height (in The Emperor, Stig and Jian). Everyone else is plain clay, including the press, speaking extras and figures without a name.
+- Any figure can still be given a colour by hand in its panel. For a named extra the colour applies to every figure of that name in the project; for a figure without a name it applies to that figure only. The first swatch, Plain, takes the colour off again.
+- Figures are one colour all over again, with no separate shirt, trousers and shoes. The neutral crotch stays.
+
 ## 2026-11-18 — Storyboard v0.23.4 (plain extras)
 - Figures without a name are plain clay all over again, with no shirt, trouser or shoe colours. Only named characters wear colours and clothes.
 - An unnamed figure's panel shows no colour swatches. Naming the figure gives it the character's colour and clothes; clearing the name makes it plain again.

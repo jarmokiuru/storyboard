@@ -47,9 +47,10 @@ Entries may be stored or deflated. A file with only `project.json` is valid (a s
 | Field | Meaning |
 |---|---|
 | `name` | As in the scenes' Henkilöt, e.g. `"A"` |
-| `model` | Body: `adult-male`, `adult-female`, `teen-male`, `teen-female`, `child`, `baby` |
+| `model` | Body: `adult-male`, `adult-female`, `teen-male`, `teen-female`, `child`, `baby`. **List only the cast here** (v0.24.0): a character with a body gets a figure colour; every other name (extras, the press, speaking extras) stays plain. `null` marks an entry the app made only to hold a hand-picked colour (not cast); a starter entry without `model` reads as `adult-male` and is cast. |
 | `height` | cm, e.g. 182 |
-| `colour` | Optional `"#rrggbb"`: the character's figure colour everywhere in the project (v0.22.0). The app adds one the first time a figure of that name is placed, and may add a character entry with `model`/`height` null just to hold it; a merge fills those in quietly. |
+| `colour` | Optional `"#rrggbb"`: the cast member's figure colour everywhere in the project (v0.22.0). Left out, the app gives the first free colour. Ignored for entries with `model` null. |
+| `handColour` | Optional `"#rrggbb"`, written by the app (v0.24.0): a colour Jarmo picked by hand in the figure panel for every figure of that name, cast or extra; `"#d6d1c9"` = picked plain. Wins over `colour`. A merge keeps it. |
 
 ### `scenes[]`
 
@@ -83,7 +84,7 @@ Entries may be stored or deflated. A file with only `project.json` is valid (a s
 `shot3d.camera`: `{ x, z (m), height (cm), pan, tilt, roll (°), focal (mm) }`.
 `shot3d.sun`: degrees on the plan the sun comes **from** (0 = north, 90 = east, + clockwise). Optional; a board without one takes the nearest earlier board's light in the same scene, else 125.
 `shot3d.light`: `{ height (° above the horizon, 5–90, default 45), sun, fill, diffusion, outside (0–100 %, defaults 50, 50, 0, 83), walls (bool, default false) }` — sun strength, ambient fill, how soft the sun is, the brightness of the sky seen through windows or behind an exterior, and whether walls and ceiling block the sun. Optional; missing values take the defaults.
-`shot3d.figures[]`: `{ id, kind: "figure", model, name, x, z (m), y (cm elevation), rot (°), height (cm), colour ("#rrggbb") }`. Since v0.22.0 this is a record of what the saved picture showed; the live figures are `scene.blocking` + `ownFigures`.
+`shot3d.figures[]`: `{ id, kind: "figure", model, name, x, z (m), y (cm elevation), rot (°), height (cm), colour ("#rrggbb"), handColour (optional: picked by hand for a figure without a name) }`. Since v0.22.0 this is a record of what the saved picture showed; the live figures are `scene.blocking` + `ownFigures`.
 `shot3d.savedCamera`, `shot3d.savedLight` (`{ sun, light }`), `shot3d.setStamp` (text): the camera, light and set when the picture was saved, so the app can mark the picture out of date. `shot3d.camera`, `sun` and `light` follow the camera even when no picture is saved (stepping between cameras keeps each board's camera).
 Optional pose fields on a figure (all may be left out; the app fills defaults):
 - `pose`: preset id from `POSE_ORDER` in `js/shotgen/poses.js` (`stand`, `walk`, `sitChair`, …). Default `stand`.
