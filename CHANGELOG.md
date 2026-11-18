@@ -1,5 +1,9 @@
 # Changelog
 
+## 2026-11-18 — Storyboard v0.18.4
+- Opening a project file in Safari on the Mac: the drawings are now copied out of the file before they are saved. v0.18.3 showed "Couldn't open the file: null" there, meaning the Mac's storage stopped the save without saying why.
+- If storage ever stops a save again, the message names what it was saving instead of "null".
+
 ## 2026-11-18 — Storyboard v0.18.3
 - Opening a project file now always says what is happening: "Opening …" as soon as the file is picked, then either the result or the reason it failed (including an empty file, e.g. one still waiting in iCloud Drive). Before, some failures showed nothing at all.
 

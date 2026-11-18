@@ -88,6 +88,11 @@ export function normalizeProject(raw) {
 }
 
 // mode "replace": same project id, overwrites the copy on this device. "copy": new ids, kept alongside.
+// Pieces of the picked file are only pointers into it. Safari on the Mac stopped the save with no reason given when
+// asked to store those (Jarmo, 2026-11-18: "Couldn't open the file: null"; iPad and iPhone were fine), so each
+// picture is copied into memory first.
+const inMemory = async (part, type) => new Blob([await part.arrayBuffer()], { type });
+
 export async function installProject({ project, files }, mode) {
   const p = structuredClone(project);
   const source = new Map();   // new board id → board id inside the file
@@ -117,16 +122,16 @@ export async function installProject({ project, files }, mode) {
     const src = source.get(b.id);
     for (const n of LAYERS) {
       const f = files.get(`layers/${src}/${n}.png`);
-      if (f) await db.putLayer(b.id, n, new Blob([f], { type: "image/png" }));
+      if (f) await db.putLayer(b.id, n, await inMemory(f, "image/png"));
       else b.layers[n].hasData = false;
     }
     const t = files.get(`thumbs/${src}.jpg`);
-    if (t) await db.putThumb(b.id, new Blob([t], { type: "image/jpeg" }));
+    if (t) await db.putThumb(b.id, await inMemory(t, "image/jpeg"));
   }
   for (const l of p.locations || []) {
     if (!l.plan) continue;
     const f = files.get(planPath(l));
-    if (f) await db.putPlan(p.id, l.id, new Blob([f], { type: l.plan.type }));
+    if (f) await db.putPlan(p.id, l.id, await inMemory(f, l.plan.type));
     else delete l.plan;
   }
   await db.putProject(p);

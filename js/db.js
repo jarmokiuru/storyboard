@@ -27,8 +27,10 @@ async function run(store, mode, fn) {
     const tx = db.transaction(store, mode);
     const req = fn(tx.objectStore(store));
     tx.oncomplete = () => resolve(req ? req.result : undefined);
-    tx.onerror = () => reject(tx.error);
-    tx.onabort = () => reject(tx.error);
+    // Safari can stop a save without giving a reason; say which kind of save it was.
+    const fail = () => reject(tx.error || new Error(`the device's storage stopped saving (${store}) without giving a reason`));
+    tx.onerror = fail;
+    tx.onabort = fail;
   });
 }
 
