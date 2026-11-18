@@ -31,10 +31,57 @@ export function defaultRoom(exterior = false) {
   return {
     exterior,
     w: 5.0, d: 4.0, h: 2.6,
-    door: { wall: "e", offset: 0, width: 0.9, height: 2.1 },
-    window: { wall: "s", offset: 0, width: 1.4, height: 1.2, sill: 0.9 },
+    openings: [newOpening("door", "e"), newOpening("window", "s")],
     north: 0,
   };
+}
+
+// Openings in a room's walls (2026-11-18; before that a room had one `door` and one `window`). A door or window is a
+// hole in the wall; a panel is a flat piece on the wall's face, e.g. a projection screen or a whiteboard.
+// wall "n"|"s"|"e"|"w"; offset = metres from the wall's centre, + = east or south; width, height, sill in metres.
+export const OPENING_KINDS = ["door", "window", "panel"];
+export const OPENING_DEFAULTS = {
+  door: { width: 0.9, height: 2.1, sill: 0 },
+  window: { width: 1.4, height: 1.2, sill: 0.9 },
+  panel: { width: 2.0, height: 1.5, sill: 0.8 },
+};
+export function newOpening(kind, wall = "n", offset = 0) {
+  return { kind, wall, offset, ...OPENING_DEFAULTS[kind] };
+}
+
+const num = (v, fallback) => (Number.isFinite(Number(v)) && v !== "" && v !== null ? Number(v) : fallback);
+
+function cleanOpening(o) {
+  if (!o || !OPENING_KINDS.includes(o.kind) || !["n", "s", "e", "w"].includes(o.wall)) return null;
+  const d = OPENING_DEFAULTS[o.kind];
+  return {
+    ...o,
+    offset: num(o.offset, 0),
+    width: Math.max(0.05, num(o.width, d.width)),
+    height: Math.max(0.05, num(o.height, d.height)),
+    sill: Math.max(0, num(o.sill, d.sill)),
+  };
+}
+
+// A room's openings, also from a room saved before the list existed (its single `door` and `window`).
+export function roomOpenings(room) {
+  if (Array.isArray(room?.openings)) return room.openings.map(cleanOpening).filter(Boolean);
+  const out = [];
+  if (room?.door) out.push(cleanOpening({ ...room.door, kind: "door", sill: 0 }));
+  if (room?.window) out.push(cleanOpening({ ...room.window, kind: "window" }));
+  return out.filter(Boolean);
+}
+
+// A room as read from a project, starter or location file, or a project stored before openings[]: missing sizes take
+// the defaults; an old door/window becomes the openings list; a room with none of these gets the default openings.
+export function readRoom(raw = {}) {
+  raw = raw || {};
+  const base = defaultRoom(!!raw.exterior);
+  const old = Array.isArray(raw.openings) || "door" in raw || "window" in raw;
+  const room = { ...base, ...raw, openings: old ? roomOpenings(raw) : base.openings };
+  delete room.door;
+  delete room.window;
+  return room;
 }
 
 export function newScene(fields = {}) {

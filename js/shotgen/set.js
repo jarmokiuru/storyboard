@@ -1,7 +1,8 @@
-// The 3D set for a location: a room built to size with a door and a window, or an open exterior. SPEC §8.1.
+// The 3D set for a location: a room built to size with its doors, windows and wall panels, or an open exterior. SPEC §8.1.
 // Plan coordinates: x runs west → east, z runs north → south (north is up on the plan), y is height. Metres.
 
 import * as THREE from "three";
+import { roomOpenings } from "../model.js";
 
 export const LAYER_CAMERA_ONLY = 1;   // seen only through the shot camera (the ceiling)
 export const LAYER_PLAN = 2;          // seen only in top and orbit views (wall outlines, camera body)
@@ -10,7 +11,7 @@ export const LAYER_PLAN = 2;          // seen only in top and orbit views (wall 
 export { defaultRoom } from "../model.js";
 
 // Clay colours (sRGB hex). Floor darker than walls so the horizon and room shape read at a glance.
-const CLAY = { floor: "#86898e", ground: "#8f9296", wall: "#d2d3d5", ceiling: "#e4e4e5", edge: "#55585d", grid: "#6c7075" };
+const CLAY = { floor: "#86898e", ground: "#8f9296", wall: "#d2d3d5", ceiling: "#e4e4e5", edge: "#55585d", grid: "#6c7075", panel: "#f4f4f2" };
 const clay = (hex) => new THREE.MeshLambertMaterial({ color: new THREE.Color(hex) });
 
 // Dark lines along a mesh's edges and around its openings: corners and door frames are what make a clay room readable.
@@ -59,12 +60,23 @@ function walls(room) {
   };
 }
 
+// Doors and windows on one wall, as holes (bottom/top in metres); panels are not holes (see panelsOn).
 function openingsOn(room, side) {
-  const out = [];
-  const { door, window: win } = room;
-  if (door && door.wall === side) out.push({ kind: "door", offset: door.offset, width: door.width, bottom: 0, top: door.height });
-  if (win && win.wall === side) out.push({ kind: "window", offset: win.offset, width: win.width, bottom: win.sill, top: win.sill + win.height });
-  return out;
+  return roomOpenings(room)
+    .filter((o) => o.wall === side && o.kind !== "panel")
+    .map((o) => ({ kind: o.kind, offset: o.offset, width: o.width, bottom: o.kind === "door" ? 0 : o.sill, top: (o.kind === "door" ? 0 : o.sill) + o.height }));
+}
+
+const panelsOn = (room, side) => roomOpenings(room).filter((o) => o.wall === side && o.kind === "panel");
+
+// A panel (projection screen, whiteboard): a thin flat board just in front of the wall's face.
+const PANEL_DEPTH = 0.02;
+function panelMesh(o, flip) {
+  const m = new THREE.Mesh(new THREE.BoxGeometry(o.width, o.height, PANEL_DEPTH), clay(CLAY.panel));
+  m.position.set(o.offset * flip, o.sill + o.height / 2, PANEL_DEPTH / 2 + 0.003);
+  m.castShadow = m.receiveShadow = true;
+  m.add(edges(m));
+  return m;
 }
 
 export function buildSet(room) {
@@ -100,6 +112,7 @@ export function buildSet(room) {
     const flip = side === "s" || side === "w" ? -1 : 1;
     const openings = openingsOn(room, side).map((o) => ({ ...o, offset: o.offset * flip }));
     const panel = wallPanel(wall.length, h, openings);
+    for (const o of panelsOn(room, side)) panel.add(panelMesh(o, flip));
     panel.position.set(wall.pos[0], 0, wall.pos[1]);
     panel.receiveShadow = true;   // shadows of people fall on walls
     panel.userData.blocksSun = true;   // casts only when "Walls block the sun" is on (stage.setLight)
@@ -127,15 +140,15 @@ function floorGrid(w, d) {
   return new THREE.LineSegments(new THREE.BufferGeometry().setFromPoints(pts), new THREE.LineBasicMaterial({ color: CLAY.grid }));
 }
 
-// Wall strips for the top view: dark where solid, a gap at the door, blue across the window.
+// Wall strips for the top view: dark where solid, a gap at a door, blue across a window, orange inside for a panel.
 const PLAN_WALL = 0.1;   // metres: drawn thickness of a wall seen from above
 function planOutline(room) {
   const group = new THREE.Group();
-  const strip = (side, wall, a, b, color, thickness) => {
+  const strip = (side, wall, a, b, color, thickness, inside = false) => {
     const len = b - a;
     if (len <= 0.001) return;
     const mid = (a + b) / 2;
-    const out = side === "n" || side === "w" ? -1 : 1;   // push the strip outside the room
+    const out = (side === "n" || side === "w" ? -1 : 1) * (inside ? -1 : 1);   // push the strip outside the room (or in)
     const geo = wall.axis === "x" ? new THREE.BoxGeometry(len, 0.02, thickness) : new THREE.BoxGeometry(thickness, 0.02, len);
     const m = new THREE.Mesh(geo, new THREE.MeshBasicMaterial({ color }));
     if (wall.axis === "x") m.position.set(mid, room.h + 0.01, wall.pos[1] + out * thickness / 2);
@@ -152,6 +165,8 @@ function planOutline(room) {
       t = Math.max(t, c.b);
     }
     strip(side, wall, t, wall.length / 2 + PLAN_WALL, 0x2a2c30, PLAN_WALL);
+    // Panels: an orange strip on the room side of the wall.
+    for (const o of panelsOn(room, side)) strip(side, wall, o.offset - o.width / 2, o.offset + o.width / 2, 0xe08a1e, PLAN_WALL * 0.6, true);
   }
   return group;
 }

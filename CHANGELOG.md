@@ -1,5 +1,12 @@
 # Changelog
 
+## 2026-11-18 — Storyboard v0.19.0 (several openings)
+- A room can now have any number of doors, windows and **panels**. A panel is a flat piece on a wall, such as a projection screen or a whiteboard. It is not a hole.
+- Set… → *Room size and openings…* lists them all. + Door, + Window and + Panel add one, and ✕ removes one. Each has a wall, offset, width, height and sill (a door has no sill).
+- In 3D, doors and windows are holes and a panel is a pale board on the wall. In the top view a panel shows as an orange strip inside the wall.
+- The Shot Designer plan draws every door and window. It leaves the wall solid behind a panel.
+- Older rooms, project files and location files keep their one door and one window: they are read into the new list.
+
 ## 2026-11-18 — Storyboard v0.18.4
 - Opening a project file in Safari on the Mac: the drawings are now copied out of the file before they are saved. v0.18.3 showed "Couldn't open the file: null" there, meaning the Mac's storage stopped the save without saying why.
 - If storage ever stops a save again, the message names what it was saving instead of "null".

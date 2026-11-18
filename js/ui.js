@@ -78,6 +78,10 @@ export function formDialog(title, fields, { ok = "Save", extra = [] } = {}) {
         form.append(el("p", { className: "form-note", textContent: f.label }));
         continue;
       }
+      if (f.type === "custom") {   // { element, read() }: a part built elsewhere (e.g. the Set dialog's openings)
+        form.append(f.element);
+        continue;
+      }
       if (f.type === "checkbox") {
         form.append(el("label", { className: "check" }, el("input", { type: "checkbox", name: f.name, checked: !!f.value }), el("span", { textContent: f.label })));
         continue;
@@ -112,7 +116,8 @@ export function formDialog(title, fields, { ok = "Save", extra = [] } = {}) {
       const values = {};
       for (const f of fields) {
         if (f.type === "note") continue;
-        if (f.type === "checkbox") values[f.name] = data.has(f.name);
+        if (f.type === "custom") values[f.name] = f.read();
+        else if (f.type === "checkbox") values[f.name] = data.has(f.name);
         else if (f.type === "checklist") values[f.name] = data.getAll(f.name);
         else values[f.name] = data.get(f.name) ?? "";
       }

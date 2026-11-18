@@ -14,7 +14,8 @@ import { parseLens } from "../lens.js";
 import { Things } from "./things.js";
 import { SIZES, frameSize, sizeFromKuvakoko } from "./framing.js";
 import { figuresFor, startPlacing, addMenu, select, selectedItem, moveSelected, deleteSelected, duplicateSelected, dropSelected, subjectDistance, refreshSelected } from "./placing.js";
-import { uid, sceneOf, orderedBoards, BOARD_WIDTH, boardHeight, heading } from "../model.js";
+import { uid, sceneOf, orderedBoards, BOARD_WIDTH, boardHeight, heading, readRoom, roomOpenings } from "../model.js";
+import { openingsEditor } from "./openings-editor.js";
 
 const $ = (id) => document.getElementById(id);
 const SLIDERS = [
@@ -62,6 +63,7 @@ export function openShotGenerator(p, b, h) {
   board = b;
   hooks = h;
   loc = locationFor(project, sceneOf(project, board));
+  if (!Array.isArray(loc.room.openings)) loc.room = readRoom(loc.room);   // stored before openings[] (v0.19.0)
   shot = { ...defaultShot(loc.room), ...(board.shot3d?.camera || {}) };
   // A board without a 3D camera yet starts on its shot-list lens (INTEGRATION.md item 1).
   const lens = parseLens(board.lens);
@@ -315,7 +317,7 @@ const num = (s, fallback) => {
 
 function setMenu(anchor) {
   openMenu(anchor, [
-    { label: "Room size, door and window…", action: setDialog },
+    { label: "Room size and openings…", action: setDialog },
     { type: "sep" },
     { label: loc.plan ? "Replace plan picture…" : "Add plan picture…", action: addPlanPicture },
     ...(loc.plan ? [
@@ -357,7 +359,7 @@ function usePlan({ plan, w, d }) {
   showPlan();
   setView("top");
   hooks.changed();
-  toast("Plan lined up with the north wall. Check the door and window against it (Set… → Room size).", 4500);
+  toast("Plan lined up with the north wall. Check the doors and windows against it (Set… → Room size and openings).", 4500);
 }
 
 async function removePlan() {
@@ -427,36 +429,31 @@ async function openLocation() {
 
 async function setDialog() {
   const r = loc.room;
-  const walls = [["", "None"], ["n", "North"], ["s", "South"], ["e", "East"], ["w", "West"]];
+  const openings = openingsEditor(roomOpenings(r));
   const v = await formDialog(`Set: ${loc.name}`, [
-    { type: "note", label: "Shared by every scene at this location. Offsets are from the wall's centre: + is east or south." },
+    { type: "note", label: "Shared by every scene at this location. Offsets are from the wall's centre: + is east or south. Sill = height of the bottom edge above the floor." },
     { name: "name", label: "Location name", value: loc.name },
     { name: "tag", label: "Plan is", type: "select", value: loc.tag, options: [["measured", "Measured"], ["traced", "Traced"], ["assumed", "Assumed"]] },
     { name: "exterior", label: "Exterior (ground, no walls)", type: "checkbox", value: r.exterior },
     { name: "w", label: "Width, west–east (m)", value: r.w },
     { name: "d", label: "Depth, north–south (m)", value: r.d },
     { name: "h", label: "Ceiling height (m)", value: r.h },
-    { name: "doorWall", label: "Door wall", type: "select", value: r.door?.wall || "", options: walls },
-    { name: "doorOffset", label: "Door offset (m)", value: r.door?.offset ?? 0 },
-    { name: "doorWidth", label: "Door width (m)", value: r.door?.width ?? 0.9 },
-    { name: "winWall", label: "Window wall", type: "select", value: r.window?.wall || "", options: walls },
-    { name: "winOffset", label: "Window offset (m)", value: r.window?.offset ?? 0 },
-    { name: "winWidth", label: "Window width (m)", value: r.window?.width ?? 1.4 },
-    { name: "winHeight", label: "Window height (m)", value: r.window?.height ?? 1.2 },
-    { name: "winSill", label: "Window sill height (m)", value: r.window?.sill ?? 0.9 },
+    { type: "custom", name: "openings", ...openings },
   ], { ok: "Build" });
   if (!v) return;
   loc.name = v.name.trim() || loc.name;
   loc.tag = v.tag;
-  loc.room = {
+  const room = {
     ...r,
     exterior: v.exterior,
     w: Math.max(1, num(v.w, r.w)),
     d: Math.max(1, num(v.d, r.d)),
     h: Math.max(1.8, num(v.h, r.h)),
-    door: v.doorWall ? { wall: v.doorWall, offset: num(v.doorOffset, 0), width: num(v.doorWidth, 0.9), height: r.door?.height ?? 2.1 } : null,
-    window: v.winWall ? { wall: v.winWall, offset: num(v.winOffset, 0), width: num(v.winWidth, 1.4), height: num(v.winHeight, 1.2), sill: num(v.winSill, 0.9) } : null,
+    openings: v.openings,
   };
+  delete room.door;
+  delete room.window;
+  loc.room = room;
   $("sg-title").textContent = `${loc.name} · Board ${hooks.label}`;
   stage.setSet(loc.room);
   hooks.changed();

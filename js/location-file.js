@@ -3,7 +3,7 @@
 // projects and be written by the chat-side floor-plan step. Format in docs/project-format.md.
 
 import * as db from "./db.js";
-import { defaultRoom, uid } from "./model.js";
+import { readRoom, uid } from "./model.js";
 
 export const LOCATION_FORMAT = 1;
 
@@ -35,7 +35,7 @@ export async function readLocationFile(file) {
   const location = {
     name: String(l.name || "Set"),
     tag: ["measured", "traced", "assumed"].includes(l.tag) ? l.tag : "assumed",
-    room: { ...defaultRoom(!!l.room?.exterior), ...(l.room || {}) },
+    room: readRoom(l.room),
     objects: (l.objects || []).map((o) => ({ ...o, id: o.id || uid(), kind: "object" })),
   };
   if (l.gps) location.gps = l.gps;

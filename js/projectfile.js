@@ -2,7 +2,7 @@
 // pictures. SPEC §2.
 
 import * as db from "./db.js";
-import { LAYERS, uid, newScene, newBoard, defaultRoom } from "./model.js";
+import { LAYERS, uid, newScene, newBoard, readRoom } from "./model.js";
 import { makeZip, readZip } from "./zip.js";
 
 // The project file format this app reads and writes (docs/project-format.md). Raise only for breaking changes.
@@ -77,7 +77,7 @@ export function normalizeProject(raw) {
 
   p.locations = (p.locations || []).map((l) => ({
     tag: "assumed", objects: [], ...l, id: l.id || uid(), name: String(l.name || "Set"),
-    room: { ...defaultRoom(!!l.room?.exterior), ...(l.room || {}) },
+    room: readRoom(l.room),
   }));
   p.characters = (p.characters || []).filter((c) => c && c.name).map((c) => ({
     name: String(c.name), model: c.model || "adult-male", height: Number(c.height) || null,

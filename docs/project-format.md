@@ -95,9 +95,9 @@ Optional pose fields on a figure (all may be left out; the app fills defaults):
 |---|---|
 | `name` | e.g. `"Keittiö"` — matched against scenes' `lokaatio` |
 | `tag` | `"measured"`, `"traced"` or `"assumed"` |
-| `room` | `{ exterior (bool), w, d, h (m), door, window, north (°) }` — `w` west–east, `d` north–south, `h` ceiling |
-| `room.door` | `{ wall: "n"|"s"|"e"|"w", offset (m from the wall's centre, + = east or south), width, height (m) }` or null |
-| `room.window` | `{ wall, offset, width, height, sill (m) }` or null |
+| `room` | `{ exterior (bool), w, d, h (m), openings, north (°) }` — `w` west–east, `d` north–south, `h` ceiling |
+| `room.openings[]` | Any number of `{ kind: "door"|"window"|"panel", wall: "n"|"s"|"e"|"w", offset (m from the wall's centre, + = east or south), width, height, sill (m: bottom edge above the floor; 0 for a door) }`. A door or window is a hole in the wall; a **panel** is a flat piece on the wall's face (projection screen, whiteboard), not a hole — the Shot Designer plan leaves the wall solid there. Missing sizes take the defaults: door 0.9 × 2.1, window 1.4 × 1.2 sill 0.9, panel 2.0 × 1.5 sill 0.8. `[]` = no openings. Added 2026-11-18 (v0.19.0), format stays 1. |
+| `room.door`, `room.window` | **Older files only** (before v0.19.0): one door `{ wall, offset, width, height }` and one window `{ wall, offset, width, height, sill }`, each or null. Still read: when a room has no `openings`, these become its openings. The app no longer writes them. A room with neither `openings` nor `door`/`window` gets the default door (east) and window (south). |
 | `objects[]` | Furniture: `{ id, kind: "object", model, x, z (m), y (cm elevation), rot (°), w, d, h (cm) }`. `model` ids are in `js/shotgen/catalog.js`, e.g. `table-sit-rectangle`. |
 | `gps` | Optional, carried as given (e.g. `{ lat, lon }`); not used by the app yet |
 | `plan` | Optional floor-plan picture, lined up with the room: `{ type ("image/png" or "image/jpeg"), w, h (picture px), a, b ([x, y] px: the north wall's inside NW and NE corners, y down), dist (m between a and b), x, z (m: where the picture's centre lies on the floor), rot (° the picture is turned, + clockwise seen from above) }`. The picture itself is `plans/<location id>.*` in the zip. Scale = `dist` ÷ the a–b distance in px. A merge never brings a plan picture in; open the location file for that. |
@@ -130,7 +130,7 @@ A starter file is a `.storyboard` zip holding only `project.json`. Minimal examp
     "characters": [{ "name": "A", "model": "adult-male", "height": 182 }],
     "scenes": [{ "kohtaus": "1", "intExt": "INT", "lokaatio": "Keittiö", "aika": "Päivä", "henkilot": "A, B", "actBefore": "ACT 1" }],
     "boards": [{ "kohtaus": "1", "kuva": "1", "kuvakoko": "WS", "lens": "25mm", "movement": "FIX", "sisalto": "Kitchen, A at the counter" }],
-    "locations": [{ "name": "Keittiö", "tag": "assumed", "room": { "exterior": false, "w": 5, "d": 4, "h": 2.6, "door": { "wall": "e", "offset": 0, "width": 0.9, "height": 2.1 }, "window": { "wall": "s", "offset": 0, "width": 1.4, "height": 1.2, "sill": 0.9 } } }]
+    "locations": [{ "name": "Keittiö", "tag": "assumed", "room": { "exterior": false, "w": 5, "d": 4, "h": 2.6, "openings": [{ "kind": "door", "wall": "e", "offset": 0, "width": 0.9, "height": 2.1 }, { "kind": "window", "wall": "s", "offset": 0, "width": 1.4, "height": 1.2, "sill": 0.9 }] } }]
   }
 }
 ```

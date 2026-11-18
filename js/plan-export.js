@@ -10,6 +10,7 @@
 // 1400 px on the long side; "sharp" is 800 px/m for scaling by hand.
 
 import { crc32 } from "./zip.js";
+import { roomOpenings } from "./model.js";
 
 const WALL = 0.08;     // metres: drawn wall thickness, inside the edge
 const LINE = 0.012;    // metres: thin lines (door leaf and swing, window)
@@ -17,7 +18,7 @@ const MAX_PIXELS = 16e6;   // iPad Safari refuses bigger canvases
 export const SHOT_DESIGNER = { ppm: 125, maxSide: 1400 };
 export const SHARP = { ppm: 800, maxSide: Infinity };
 
-// room: { w, d, door, window } in metres (plan axes: x west → east, z north → south; north up).
+// room: { w, d, openings } in metres (plan axes: x west → east, z north → south; north up).
 // Big rooms get fewer px/m to stay under maxSide and the canvas limit; the result says how many.
 export async function blankPlan(room, { ppm, maxSide } = SHOT_DESIGNER) {
   ppm = Math.min(ppm, Math.floor(maxSide / Math.max(room.w, room.d)), Math.floor(Math.sqrt(MAX_PIXELS / (room.w * room.d))));
@@ -36,10 +37,11 @@ export async function blankPlan(room, { ppm, maxSide } = SHOT_DESIGNER) {
   for (const side of ["n", "s", "w", "e"]) {
     const along = side === "n" || side === "s" ? W : H;
     // Openings on this wall, as pixel spans along it (offset is from the wall's centre, + east or south).
-    const cuts = [];
-    if (room.door?.wall === side) cuts.push({ kind: "door", ...span(room.door, along, ppm) });
-    if (room.window?.wall === side) cuts.push({ kind: "window", ...span(room.window, along, ppm) });
-    cuts.sort((p, q) => p.a - q.a);
+    // Panels (screens, boards) are not holes, so the wall stays solid there: the plan shows walls, windows, doors only.
+    const cuts = roomOpenings(room)
+      .filter((o) => o.wall === side && o.kind !== "panel")
+      .map((o) => ({ kind: o.kind, ...span(o, along, ppm) }))
+      .sort((p, q) => p.a - q.a);
     let at = 0;
     for (const cut of cuts) {
       band(g, side, at, cut.a, t, W, H);

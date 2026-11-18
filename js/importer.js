@@ -4,7 +4,7 @@
 
 import { readFirstSheet } from "./xlsx.js";
 import { parseScript } from "./script.js";
-import { newScene, newBoard, sceneBoards, uid } from "./model.js";
+import { newScene, newBoard, sceneBoards, uid, readRoom, roomOpenings } from "./model.js";
 import { formDialog, toast } from "./ui.js";
 
 const COLUMNS = {
@@ -291,8 +291,20 @@ export async function importScript(project, text) {
 
 // ---------- merging a starter project file (INTEGRATION.md item 3) ----------
 
-const roomText = (r) => r.exterior ? "exterior" : `${r.w} × ${r.d} m, ceiling ${r.h} m`;
-const sameRoom = (a, b) => JSON.stringify({ ...a, north: a.north ?? 0 }) === JSON.stringify({ ...b, north: b.north ?? 0 });
+const roomText = (r) => {
+  if (r.exterior) return "exterior";
+  const n = roomOpenings(r).length;
+  return `${r.w} × ${r.d} m, ceiling ${r.h} m, ${n === 1 ? "1 opening" : n + " openings"}`;
+};
+// Both read the same way first, so a room stored before openings[] matches its own door and window.
+const sameRoom = (a, b) => {
+  const flat = (raw) => {
+    const r = readRoom(raw);
+    const openings = r.openings.map((o) => [o.kind, o.wall, o.offset, o.width, o.height, o.sill]);
+    return JSON.stringify([!!r.exterior, r.w, r.d, r.h, r.north ?? 0, openings]);
+  };
+  return flat(a) === flat(b);
+};
 
 // Merge a starter file into a project already on this device, by the shot-list rules: scenes by Kohtaus #, boards
 // by Kohtaus # + Kuva #, new ones added, empty fields filled, changed text listed to accept or keep. Camera format,

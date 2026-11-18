@@ -44,7 +44,7 @@ Suggested libraries (all must be vendored, licence checked and noted in `vendor/
 Project
   title, aspect ratio (e.g. 2.39:1), camera format (sensor), lens set, export history
   Locations[]            -- a 3D "set" shared by every scene shot there
-    name, room (W×D×H m), openings (doors, windows), objects, floor-plan image + scale, north angle
+    name, room (W×D×H m), openings (any number of doors, windows and wall panels such as a projection screen — v0.19.0), objects, floor-plan image + scale, north angle
   Scenes[]               -- one per Kohtaus #
     Kohtaus #, INT/EXT, Lokaatio, Vuorokaudenaika, Synopsis, Henkilöt, location ref
     Boards[]             -- one per Kuva # (or several boards per shot, see below)
