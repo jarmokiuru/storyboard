@@ -1,5 +1,8 @@
 # Changelog
 
+## 2026-11-18 — Storyboard v0.18.2
+- Shot Generator: the arrow keys now pan (← →) and tilt (↑ ↓) the camera, smoothly while held, Shift for faster. W A S D still move the camera, R / F still raise and lower it.
+
 ## 2026-11-18 — Storyboard v0.18.1
 - Tool samples are narrower (about two thirds of the button).
 - Every drawing tool now has the same nine colours: five greys plus the note pen's red, orange, blue and green. The note pen still starts on red; keys 8 / 9 / 0 pick the three darkest greys.

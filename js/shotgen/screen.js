@@ -740,13 +740,16 @@ function wheel(e) {
   zoom(Math.exp(e.deltaY * 0.002));
 }
 
-// Mac keys, as in Storyboarder's Shot Generator (read from its installed app, 2026-11-17): W/A/S/D or the arrows
-// move the camera, R/F raise and lower it, Shift moves faster (smooth while held). Z/X roll, T top view ↔ camera
+// Mac keys, after Storyboarder's Shot Generator (read from its installed app, 2026-11-17): W/A/S/D move the camera,
+// the arrows pan and tilt it (Jarmo, 2026-11-18; Storyboarder moves with both), R/F raise and lower it, Shift goes
+// faster (smooth while held). Z/X roll, T top view ↔ camera
 // view, [ wider lens / ] longer lens (through the lens set), Backspace deletes the chosen piece, Esc lets go of it
 // (or goes back to the board when nothing is chosen), Cmd-D duplicates, Cmd-B drops to the floor, Cmd-K switches
 // Clay/Outline.
-const MOVES = { w: [0, 1], arrowup: [0, 1], s: [0, -1], arrowdown: [0, -1], a: [-1, 0], arrowleft: [-1, 0], d: [1, 0], arrowright: [1, 0] };
+const MOVES = { w: [0, 1], s: [0, -1], a: [-1, 0], d: [1, 0] };
+const TURNS = { arrowleft: [-1, 0], arrowright: [1, 0], arrowup: [0, 1], arrowdown: [0, -1] };   // [pan, tilt]
 const SPEED = 1.2;        // metres per second; Shift × 3
+const TURN = 30;          // degrees per second; Shift × 3
 const LIFT = 0.6;         // metres per second up or down
 const held = new Set();
 let fast = false;
@@ -771,7 +774,7 @@ function keys(e) {
   if (typing(e.target)) return;
   fast = e.shiftKey;
   if (e.target.type === "range" && key.startsWith("arrow")) return;   // a chosen slider steps with the arrows
-  if (MOVES[key] || key === "r" || key === "f") {
+  if (MOVES[key] || TURNS[key] || key === "r" || key === "f") {
     e.preventDefault();
     e.stopPropagation();
     if (!held.size) {
@@ -813,6 +816,12 @@ function tick(now) {
   const a = (shot.pan * Math.PI) / 180;
   shot.x = round(shot.x + (Math.sin(a) * fwd + Math.cos(a) * side) * step);
   shot.z = round(shot.z + (-Math.cos(a) * fwd + Math.sin(a) * side) * step);
+  let pan = 0;
+  let tilt = 0;
+  for (const k of held) if (TURNS[k]) { pan += TURNS[k][0]; tilt += TURNS[k][1]; }
+  const turn = TURN * (fast ? 3 : 1) * dt;
+  if (pan) shot.pan = Math.round(wrap(shot.pan + pan * turn) * 10) / 10;
+  if (tilt) shot.tilt = Math.round(clamp(shot.tilt + tilt * turn, -90, 90) * 10) / 10;
   if (held.has("r")) shot.height = clamp(shot.height + LIFT * 100 * dt * (fast ? 3 : 1), 10, 400);
   if (held.has("f")) shot.height = clamp(shot.height - LIFT * 100 * dt * (fast ? 3 : 1), 10, 400);
   apply();
