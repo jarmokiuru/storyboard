@@ -139,7 +139,7 @@ select { -webkit-appearance: none; appearance: none; padding-right: 22px; backgr
 .tool-grid button { padding: 0 4px; font-size: 13px; min-height: 38px; }
 /* Tool buttons with a sample stroke under the name (js/tool-samples.js). */
 .tool-grid button:has(.sample) { display: flex; flex-direction: column; align-items: stretch; justify-content: center; gap: 3px; padding: 4px 4px 5px; line-height: 14px; }
-.tool-grid .sample { display: block; width: 100%; height: 16px; border-radius: 3px; pointer-events: none; }
+.tool-grid .sample { display: block; width: 62%; align-self: center; height: 16px; border-radius: 3px; pointer-events: none; }
 .tool-grid button.on .sample { box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.35); }
 #tools .toggle { font-size: 13px; padding: 0 4px; }
 .move-modes { display: grid; gap: 4px; }

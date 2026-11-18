@@ -2,17 +2,18 @@
 // Order and number keys follow Storyboarder 3.0: 1 light pencil, 2 brush, (3 tone — not built), 4 pencil, 5 pen, 6 note pen, 7 eraser.
 // Line weight comes from tilt and speed; pressure joins in only if the pen reports it varying (SPEC §6.3).
 
-const GREYS = ["#1c1d20", "#3a3c40", "#6b6f76", "#9a9ea6", "#c9ccd1"];
-const NOTE_COLOURS = ["#d23c32", "#e08a1e", "#2f7fd1", "#2e9e5b", "#1c1d20"];
+// One colour set for every drawing tool (Jarmo, 2026-11-18): five greys, then the note colours.
+// Keys 8 / 9 / 0 pick the first three. Defaults below index into this list.
+const COLOURS = ["#1c1d20", "#3a3c40", "#6b6f76", "#9a9ea6", "#c9ccd1", "#d23c32", "#e08a1e", "#2f7fd1", "#2e9e5b"];
 
 // sizes: board pixels (boards are 2048 px wide). tilt: how much tipping the Pencil widens the mark.
 // speed: how much a fast stroke thins it (0 = not at all). alpha: how see-through the finished stroke is.
 export const TOOLS = [
-  { id: "light", label: "Light pencil", short: "Light", key: "1", layer: "pencil", sizes: [3, 6, 12], colors: GREYS, color: 2, alpha: 0.35, tilt: 2.5, speed: 0.5, shape: "line" },
-  { id: "brush", label: "Brush", short: "Brush", key: "2", layer: "fill", sizes: [24, 48, 96], colors: GREYS, color: 2, alpha: 0.3, tilt: 2.5, speed: 0.3, shape: "stamp" },
-  { id: "pencil", label: "Pencil", short: "Pencil", key: "4", layer: "pencil", sizes: [4, 8, 16], colors: GREYS, color: 1, alpha: 0.85, tilt: 2.5, speed: 0.55, shape: "line" },
-  { id: "pen", label: "Pen", short: "Pen", key: "5", layer: "ink", sizes: [4, 8, 16], colors: GREYS, color: 0, alpha: 1, tilt: 0.3, speed: 0.6, shape: "line" },
-  { id: "note", label: "Note pen", short: "Note", key: "6", layer: "notes", sizes: [4, 8, 16], colors: NOTE_COLOURS, color: 0, alpha: 1, tilt: 0.3, speed: 0.3, shape: "line" },
+  { id: "light", label: "Light pencil", short: "Light", key: "1", layer: "pencil", sizes: [3, 6, 12], colors: COLOURS, color: 2, alpha: 0.35, tilt: 2.5, speed: 0.5, shape: "line" },
+  { id: "brush", label: "Brush", short: "Brush", key: "2", layer: "fill", sizes: [24, 48, 96], colors: COLOURS, color: 2, alpha: 0.3, tilt: 2.5, speed: 0.3, shape: "stamp" },
+  { id: "pencil", label: "Pencil", short: "Pencil", key: "4", layer: "pencil", sizes: [4, 8, 16], colors: COLOURS, color: 1, alpha: 0.85, tilt: 2.5, speed: 0.55, shape: "line" },
+  { id: "pen", label: "Pen", short: "Pen", key: "5", layer: "ink", sizes: [4, 8, 16], colors: COLOURS, color: 0, alpha: 1, tilt: 0.3, speed: 0.6, shape: "line" },
+  { id: "note", label: "Note pen", short: "Note", key: "6", layer: "notes", sizes: [4, 8, 16], colors: COLOURS, color: 5, alpha: 1, tilt: 0.3, speed: 0.3, shape: "line" },
   { id: "eraser", label: "Eraser", short: "Eraser", key: "7", layer: null, sizes: [16, 40, 100], colors: [], alpha: 1, tilt: 1, speed: 0, shape: "line" },
 ];
 

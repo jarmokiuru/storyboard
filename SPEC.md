@@ -102,6 +102,8 @@ Follow Storyboarder's arrangement [verified in outline from its README/site; exa
 ### 6.2 Drawing tools
 Storyboarder's set [verified: light pencil, pencil, pen, brush, eraser, note pen; 3 sizes and a 5-colour palette per tool]:
 
+Ours (v0.18.1, Jarmo's choice): one shared 9-colour set for every drawing tool — five greys plus red, orange, blue, green.
+
 | Key (Mac) | Tool | Default layer |
 |---|---|---|
 | 1 | Light pencil (roughing) | pencil |

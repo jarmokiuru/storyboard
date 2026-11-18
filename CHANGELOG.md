@@ -1,5 +1,9 @@
 # Changelog
 
+## 2026-11-18 — Storyboard v0.18.1
+- Tool samples are narrower (about two thirds of the button).
+- Every drawing tool now has the same nine colours: five greys plus the note pen's red, orange, blue and green. The note pen still starts on red; keys 8 / 9 / 0 pick the three darkest greys.
+
 ## 2026-11-17 — Storyboard v0.18.0 (tool samples)
 - Each drawing tool's button shows a small sample stroke under its name, drawn with the tool itself in its current colour and size: the Pencil tipped over in the middle (tilt widens the soft tools) and a quick flick at the end (speed thins it). The eraser shows a cut through grey. The samples change when you pick another colour or size.
 
