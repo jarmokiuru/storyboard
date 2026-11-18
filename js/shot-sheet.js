@@ -11,7 +11,7 @@ const WIDTHS = [10, 8, 8, 10, 12, 18, 9, 18, 16];
 
 const clean = (s) => String(s).replace(/[\\/:*?"<>|\s]+/g, "_");
 
-// "1-1b.png": scene number, then the board's number as shown in the strip.
+// "1-1b.png" (or "1-1.png" for a shot with one board): scene number, then the board's number as shown in the strip.
 export function imageName(project, board) {
   return `${clean(sceneOf(project, board).kohtaus || "x")}-${clean(boardLabel(project, board))}.png`;
 }

@@ -61,9 +61,16 @@
   </main>
 
   <aside id="panel">
-    <section class="shot">
+    <div class="panel-head">
       <p id="scene-heading" class="heading"></p>
-      <p id="board-label" class="muted"></p>
+      <p id="board-label" class="muted" hidden></p>
+    </div>
+    <details class="psec" data-sec="shots" open>
+      <summary><h3>Shot list</h3></summary>
+      <ol id="shot-list"></ol>
+    </details>
+    <details class="psec shot" data-sec="shot" open>
+      <summary><h3>Shot details</h3></summary>
       <div class="pair">
         <label><span>Kuva #</span><input id="f-kuva" autocomplete="off"></label>
         <label><span>Kuvakoko</span><input id="f-kuvakoko" autocomplete="off"></label>
@@ -77,27 +84,28 @@
       <label><span>Action</span><textarea id="f-action" rows="2"></textarea></label>
       <label><span>Notes</span><textarea id="f-notes" rows="2"></textarea></label>
       <label><span>Scene</span><select id="f-scene"></select></label>
-    </section>
-    <section class="buttons">
+    </details>
+    <details class="psec buttons" data-sec="boards" open>
+      <summary><h3>Boards</h3></summary>
       <button id="new-board" title="Another board in this shot">New board</button>
       <button id="new-shot" title="Next Kuva # (N)">New shot</button>
       <button id="dup-board">Duplicate</button>
       <button id="del-board" class="danger">Delete board</button>
       <button id="shotgen-btn">Shot Generator</button>
-    </section>
-    <section>
-      <h3>Layers</h3>
+    </details>
+    <details class="psec" data-sec="layers" open>
+      <summary><h3>Layers</h3></summary>
       <ul id="layers"></ul>
       <button id="clear-layer">Clear active layer</button>
-    </section>
-    <section>
-      <h3>Reference</h3>
+    </details>
+    <details class="psec" data-sec="reference" open>
+      <summary><h3>Reference</h3></summary>
       <div class="seg">
         <button data-fit="fit" class="on">Fit</button>
         <button data-fit="fill">Fill</button>
       </div>
       <button id="add-photo">Add photo…</button>
-    </section>
+    </details>
   </aside>
 
   <footer id="strip"></footer>

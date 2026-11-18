@@ -1,5 +1,11 @@
 # Changelog
 
+## 2026-11-18 — Storyboard v0.21.0 (shot list in the panel)
+- The board editor's right-hand panel starts with the slugline and the shot, e.g. "8. INT POLICE STATION - PRESS ROOM - LATER / Shot 1a".
+- New **Shot list** section: every shot of the scene with its Kuvakoko and Sisältö. Tap one to jump to its first board. The current shot is highlighted, and a shot with several boards shows the count, e.g. "2 (3)".
+- Every panel section (Shot list, Shot details, Boards, Layers, Reference) folds with a tap on its title. The app remembers which are folded on that device.
+- Board names: a shot with several boards is now 1a, 1b, 1c (before: 1, 1b, 1c). A shot with one board stays 1. This shows everywhere: strip, panel, PDF, picture names (e.g. 8-1a.png), shot data sheet.
+
 ## 2026-11-18 — Storyboard v0.20.0 (change the aspect ratio)
 - In the editor, tap the project title in the top bar (it now shows ▾) to open **Project**: rename the project or change its aspect ratio.
 - Changing the ratio reshapes every board. Boards stay 2048 px wide and drawings stay centred. A taller frame adds blank space above and below; a shorter frame cuts the same amount off the top and bottom, and the app warns with the amount before it does that. Horizon lines keep their place on the drawing, and thumbnails are made again.

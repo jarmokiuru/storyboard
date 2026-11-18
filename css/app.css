@@ -526,3 +526,21 @@ fieldset.openings legend { color: var(--muted); font-size: 13px; padding: 0 4px;
 /* The project title in the editor's top bar opens the Project dialog (title, aspect ratio). */
 #top-bar button.title { background: transparent; border-color: transparent; padding: 0 6px; font-size: inherit; text-align: left; }
 #top-bar button.title::after { content: " ▾"; color: var(--muted); font-weight: 400; }
+
+/* Editor panel: the slugline and shot name stay on top; every section below folds (v0.21.0). */
+#panel .panel-head { padding-bottom: 10px; margin-bottom: 10px; border-bottom: 1px solid var(--line); }
+#panel .panel-head .shot-name { color: var(--accent); white-space: nowrap; }
+#panel details.psec { padding-bottom: 12px; margin-bottom: 12px; border-bottom: 1px solid var(--line); }
+#panel details.psec:last-child { border-bottom: 0; }
+#panel details.psec[open] { display: grid; gap: 8px; }
+#panel details.psec.buttons[open] { gap: 6px; }
+#panel details.psec > summary { list-style: none; cursor: pointer; display: flex; align-items: center; gap: 6px; min-height: 28px; -webkit-user-select: none; user-select: none; }
+#panel details.psec > summary::-webkit-details-marker { display: none; }
+#panel details.psec > summary::before { content: "▸"; color: var(--muted); font-size: 12px; width: 10px; transition: transform 0.15s; }
+#panel details.psec[open] > summary::before { transform: rotate(90deg); }
+#shot-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; max-height: 40vh; overflow-y: auto; }
+#shot-list button { width: 100%; display: grid; grid-template-columns: minmax(2.4em, auto) 1fr; gap: 6px; align-items: baseline; text-align: left; padding: 5px 6px; min-height: 0; font-size: 13px; background: transparent; border-color: transparent; }
+#shot-list button.on { background: var(--accent); color: var(--accent-text); }
+#shot-list .num { font-weight: 600; }
+#shot-list .what { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+#shot-list button:not(.on) .what { color: var(--muted); }

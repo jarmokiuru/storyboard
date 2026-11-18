@@ -69,7 +69,7 @@ Entries may be stored or deflated. A file with only `project.json` is valid (a s
 |---|---|
 | `kuva` [required] | Kuva # as text |
 | `sceneId` or `kohtaus` [one required] | Which scene: by the scene's `id`, or (starter files) by its `kohtaus` |
-| `newShot` | `true` = starts a new shot; `false` = continues the shot before it (shown 3b, 3c). Default `true` |
+| `newShot` | `true` = starts a new shot; `false` = continues the shot before it (the shot's boards show as 3a, 3b, 3c; a shot with one board as 3). Default `true` |
 | `kuvakoko`, `sisalto`, `lens`, `movement`, `notes`, `dialogue`, `action` | Text. `lens` is the shot list's Lens/Focal, e.g. `"50mm"` |
 | `id` | Optional in starter files |
 | `horizon` | Horizon guide, 0 = top … 1 = bottom (default 0.5) |
@@ -142,4 +142,4 @@ A starter file is a `.storyboard` zip holding only `project.json`. Minimal examp
 
 ## Board picture names
 
-Exported board pictures are named `<Kohtaus #>-<board>.png`, e.g. `12-3b.png` (spaces and `/ \ : * ? " < > |` become `_`). The Daily Package matches pictures to shots by these names; change the pattern only together with `INTEGRATION.md`.
+Exported board pictures are named `<Kohtaus #>-<board>.png`, e.g. `12-3.png`, or `12-3a.png`, `12-3b.png` for a shot with several boards (spaces and `/ \ : * ? " < > |` become `_`). The Daily Package matches pictures to shots by these names; change the pattern only together with `INTEGRATION.md`.

@@ -55,6 +55,7 @@ export function initEditor({ exit }) {
     edit: editField, changeScene, newBoard, duplicate: duplicateCurrent, remove: deleteCurrent,
     toggleLayer, setActive: (n) => view.setActive(n), setOpacity, clearLayer: () => clearLayer(true),
     addPhoto, setFitMode: (m) => (fitMode = m),
+    jump: (id) => selectBoard(byId(id), true),
   });
   initStrip($("strip"), {
     select: (id) => selectBoard(byId(id)),

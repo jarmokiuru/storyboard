@@ -78,7 +78,7 @@ export async function askOptions(project, preset = {}) {
 }
 
 // The boards to print: the ticked scenes, narrowed by the "only these shots" list. Null when the list can't be read.
-//   3      every board of Kuva 3 (3, 3b, 3c…)     4b    just that board
+//   3      every board of Kuva 3 (3a, 3b, 3c…)    4b    just that board
 //   7-9    Kuva 7 to 9                            12/3  Kohtaus 12, Kuva 3 (also 12/3b, 12/7-9)
 export function chosenBoards(project, sceneIds, only) {
   const chosen = sceneIds ? new Set(sceneIds) : null;

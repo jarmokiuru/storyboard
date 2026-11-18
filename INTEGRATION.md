@@ -86,6 +86,7 @@ The test run's scripts (room reading → starter file, blank plan) were small Py
 ## Storage and naming [proposed]
 - The project file lives on Jarmo's Drive in the production's camera folder, e.g. `KUVAUS/Storyboard/<Project>.storyboard`. Board PNGs and the shot data sheet go beside it when exported.
 - Board image names stay `<Kohtaus #>-<board>.png` (e.g. `12-3b.png`). The Daily Package matches pictures to shots by these names. Don't change the pattern without noting it here.
+- **Changed 2026-11-18 (v0.21.0):** the first board of a shot that has several boards is now `3a`, not `3` (so `12-3a.png`, `12-3b.png`); a shot with a single board stays `12-3.png`. The Kuva # itself is unchanged, so matching by Kohtaus + Kuva still works; match the letter only if needed.
 
 ## Used on the chat side (no app work, for reference)
 - **Daily Package:** a board picture beside each shot on the scene pages.

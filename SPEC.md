@@ -57,7 +57,7 @@ Project
 ```
 
 - A shot (`Kuva #`) can have more than one board, e.g. start and end frame of a move. Storyboarder's "new shot" behaviour [verified: N = new board / new shot in Storyboarder's wiki].
-- Numbering: boards are numbered by their `Kuva #`. Continuation boards show as `3`, `3b`, `3c`.
+- Numbering: boards are numbered by their `Kuva #`. A shot with several boards shows as `3a`, `3b`, `3c`; a shot with one board as `3` (v0.21.0; before, the first board was `3`).
 - Changing a board's scene or reordering never renumbers `Kuva #` silently; it asks.
 
 ## 4. Getting scenes and shots in

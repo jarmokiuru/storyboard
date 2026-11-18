@@ -119,11 +119,12 @@ export const sceneBoards = (p, sceneId) => p.boards.filter((b) => b.sceneId === 
 export const orderedBoards = (p) => p.scenes.flatMap((s) => sceneBoards(p, s.id));
 export const sceneOf = (p, board) => p.scenes.find((s) => s.id === board.sceneId);
 
-// Continuation boards within a shot show as 3, 3b, 3c — by order, never stored.
+// A shot with one board shows as 3; a shot with several as 3a, 3b, 3c (Jarmo, 2026-11-18; before: 3, 3b, 3c).
+// By order, never stored.
 export function boardLabel(p, board) {
   const same = sceneBoards(p, board.sceneId).filter((b) => b.kuva === board.kuva);
   const i = same.indexOf(board);
-  return i <= 0 ? board.kuva : board.kuva + String.fromCharCode(97 + i);
+  return same.length <= 1 || i < 0 ? board.kuva : board.kuva + String.fromCharCode(97 + i);
 }
 
 export function nextKuva(p, sceneId) {
