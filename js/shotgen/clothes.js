@@ -11,11 +11,11 @@ export const CLOTH = { skin: "#d6d1c9", trousers: "#62666d", shoes: "#2f3135" };
 
 // How far each part stands off the body, as a share of the figure's height (1.8 m figure: about 2 cm), so the
 // clothes sit a little loose rather than skin-tight (Jarmo, 2026-11-18).
-const OUT = [0, 0.016, 0.018, 0.026];   // skin, shirt, trousers, shoes (shoes stand proud of the trouser hems)
+const OUT = [0, 0.011, 0.012, 0.02];   // skin, shirt, trousers, shoes (shoes stand proud of the trouser hems)
 
 // Smoothing passes under the clothes: a few everywhere (loose cloth hides the body's detail), many more around the
 // crotch and seat so nothing anatomical shows through.
-const SMOOTH = 8;
+const SMOOTH = 4;
 const SMOOTH_CROTCH = 24;
 // The crotch is then filled in like a stretched sheet: no fold between the thighs, the same neutral shape on every
 // body (Jarmo, 2026-11-18). Passes of plain smoothing, strongest at the middle of the zone.
