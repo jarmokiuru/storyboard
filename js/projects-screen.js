@@ -76,15 +76,29 @@ async function newProjectDialog() {
   openProject(p);
 }
 
+// Any failure says so on screen (Jarmo, 2026-11-18: on the Mac an import did nothing at all).
 async function importDialog() {
+  try {
+    await importFile();
+  } catch (err) {
+    console.error(err);
+    toast(`Couldn't open the file: ${err?.message || err}`, 12000);
+  }
+}
+
+async function importFile() {
   const file = await pickFile();
   if (!file) return;
+  if (!file.size) return toast(`"${file.name}" is empty here. If it lives in iCloud Drive, download it to the Mac first (Finder: right-click → Download Now).`, 10000);
+  toast(`Opening "${file.name}"…`, 60000);
   let data;
   try {
     data = await readProjectFile(file);
   } catch (err) {
-    return toast(err.newer ? err.message : "That isn't a Storyboard project file.", 6000);
+    console.error(err);
+    return toast(err.newer ? err.message : `That isn't a Storyboard project file (${err.message}).`, 10000);
   }
+  toast(`Read "${file.name}"`, 1500);
   const existing = await db.getProject(data.project.id);
   let mode = "replace";
   if (existing) {
