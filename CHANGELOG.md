@@ -1,5 +1,10 @@
 # Changelog
 
+## 2026-11-18 — Storyboard v0.23.0 (clothes on the figures)
+- Every figure wears plain clothes: a long-sleeved shirt in the character's colour, grey trousers and dark shoes. Head, neck and hands stay a light clay skin.
+- The clothes move with every pose and with dragging the limbs. They stand slightly off the body and add nothing to draw, so the 2017 Mac is no slower.
+- The selection highlight and Outline shading work as before.
+
 ## 2026-11-18 — Storyboard v0.22.0 (one 3D space per scene)
 - **Shared blocking:** the figures belong to the scene. Every board of the scene sees the same actors, so move an actor once and every camera sees it.
 - **This board only:** tick it in a figure's panel and that board keeps its own position and pose for the figure, for actors who move during the scene. Untick it to follow the shared blocking again.

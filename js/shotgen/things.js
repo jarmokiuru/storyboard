@@ -250,7 +250,7 @@ export class Things {
   paintSelection(n) {
     const on = n.item.id === this.selectedId;
     n.holder.children[0]?.traverse((m) => {
-      if (m.material?.emissive) m.material.emissive.setHex(on ? 0x5a4410 : 0x000000);
+      for (const mat of [m.material].flat()) if (mat?.emissive) mat.emissive.setHex(on ? 0x5a4410 : 0x000000);   // dressed figures have several
     });
     if (n.mark?.userData.outline) {
       n.mark.clear();

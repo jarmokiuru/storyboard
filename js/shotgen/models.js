@@ -3,6 +3,7 @@
 import * as THREE from "three";
 import { GLTFLoader } from "../../vendor/three/examples/jsm/loaders/GLTFLoader.js";
 import { clone as cloneSkinned } from "../../vendor/three/examples/jsm/utils/SkeletonUtils.js";
+import { dress, outfit } from "./clothes.js";
 
 const loader = new GLTFLoader();
 const cache = new Map();   // path → Promise<{ scene, size }>
@@ -44,23 +45,31 @@ export async function makeObject(entry, colour = "#b7b2a8") {
   return { node: copy, size };
 }
 
-// A figure: one level of detail shown, the others hidden; the head keeps its size when the body is scaled.
+// A figure: one level of detail shown, the others hidden; the head keeps its size when the body is scaled. Dressed in
+// plain clothes, the shirt in the figure's colour.
 export async function makeFigure(entry, colour) {
   const { scene, size } = await load(entry.path);
+  dress(scene);   // shirt, trousers, shoes (clothes.js), once per body
   const copy = cloneSkinned(scene);
-  const mat = clay(colour);
+  let shown = null;
+  copy.traverse((m) => {
+    if (m.isMesh || m.isSkinnedMesh) {
+      const lod = (m.name.match(/[_-]LOD(\d)/i) || [])[1];   // the files use both "_LOD2" and "-LOD2"
+      m.visible = lod === undefined || Number(lod) === FIGURE_DETAIL;
+      if (m.visible && !shown) shown = m;
+    }
+  });
+  const mat = outfit(colour, shown?.geometry.userData.cloth);
   copy.traverse((m) => {
     if (m.isMesh || m.isSkinnedMesh) {
       m.material = mat;
       m.castShadow = m.receiveShadow = true;
       m.frustumCulled = false;   // posed limbs can leave the bind-pose bounds
-      const lod = (m.name.match(/[_-]LOD(\d)/i) || [])[1];   // the files use both "_LOD2" and "-LOD2"
-      if (lod !== undefined) m.visible = Number(lod) === FIGURE_DETAIL;
     }
   });
   const head = copy.getObjectByName("Head");
   const fig = { node: copy, size, head, colour };
-  fig.paint = (c) => { mat.color.set(c); fig.colour = c; };
+  fig.paint = (c) => { mat.paint(c); fig.colour = c; };   // the shirt
   return fig;
 }
 
