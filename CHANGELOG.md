@@ -1,5 +1,10 @@
 # Changelog
 
+## 2026-11-18 — Storyboard v0.20.0 (change the aspect ratio)
+- In the editor, tap the project title in the top bar (it now shows ▾) to open **Project**: rename the project or change its aspect ratio.
+- Changing the ratio reshapes every board. Boards stay 2048 px wide and drawings stay centred. A taller frame adds blank space above and below; a shorter frame cuts the same amount off the top and bottom, and the app warns with the amount before it does that. Horizon lines keep their place on the drawing, and thumbnails are made again.
+- Saved 3D pictures are reshaped the same way; save again from the Shot Generator for a full new frame.
+
 ## 2026-11-18 — Storyboard v0.19.0 (several openings)
 - A room can now have any number of doors, windows and **panels**. A panel is a flat piece on a wall, such as a projection screen or a whiteboard. It is not a hole.
 - Set… → *Room size and openings…* lists them all. + Door, + Window and + Panel add one, and ✕ removes one. Each has a wall, offset, width, height and sill (a door has no sill).

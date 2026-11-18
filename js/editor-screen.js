@@ -2,7 +2,7 @@
 
 import * as db from "./db.js";
 import {
-  LAYER_LABELS, BOARD_WIDTH, boardHeight, heading, boardLabel, orderedBoards, sceneBoards, sceneOf, ago,
+  LAYER_LABELS, BOARD_WIDTH, boardHeight, RATIOS, ratioLabel, heading, boardLabel, orderedBoards, sceneBoards, sceneOf, ago,
   insertBoardAfter, insertBoardBefore, toggleNewShot, nudgeBoard, duplicateBoard, removeBoard, moveBoard, moveBoardToScene, addScene, removeScene, newScene, nextSceneNumber,
 } from "./model.js";
 import { TOOLS, MOVE, loadToolSettings, saveToolSettings } from "./brush.js";
@@ -20,6 +20,7 @@ import { renumber } from "./renumber.js";
 import { logText, clearLog } from "./pencil-log.js";
 import { shotSheetXlsx, shotSheetCsv, boardImagesZip, imageName } from "./shot-sheet.js";
 import { VERSION } from "./version.js";
+import { changeRatio, drawnBoards, cropEach } from "./ratio-change.js";
 
 const $ = (id) => document.getElementById(id);
 const GUIDES_KEY = "storyboard.guides";
@@ -61,6 +62,7 @@ export function initEditor({ exit }) {
   });
 
   $("back").onclick = async () => { await flush(); leave(); };
+  $("project-title").onclick = projectDialog;
   $("undo").onclick = () => view.undo();
   $("redo").onclick = () => view.redo();
   $("guides-btn").onclick = (e) => guidesMenu(e.currentTarget);
@@ -628,6 +630,45 @@ function pickPaletteColour(i) {
   settings[toolId].color = def.colors[i];
   saveToolSettings(settings);
   setTool(toolId);
+}
+
+// ---------- project: title and aspect ratio ----------
+
+async function projectDialog() {
+  await flush();
+  const known = RATIOS.find((r) => Math.abs(r.value - project.ratio) < 0.005);
+  const v = await formDialog("Project", [
+    { name: "title", label: "Title", value: project.title },
+    { name: "ratio", label: "Aspect ratio", type: "select", value: known ? String(known.value) : "custom", options: [...RATIOS.map((r) => [String(r.value), r.label]), ["custom", "Custom…"]] },
+    { name: "custom", label: "Custom ratio, e.g. 2.20 (only if Custom)", value: known ? "" : String(project.ratio) },
+  ]);
+  if (!v) return;
+  const title = v.title.trim() || project.title;
+  if (title !== project.title) {
+    project.title = title;
+    $("project-title").textContent = title;
+    edited();
+    await flush();
+  }
+  const ratio = v.ratio === "custom" ? parseFloat(String(v.custom).replace(",", ".")) : parseFloat(v.ratio);
+  if (!(ratio > 0.4 && ratio < 4)) return toast("That aspect ratio doesn't look right.");
+  if (boardHeight(ratio) === boardHeight(project.ratio)) return;
+  const drawn = drawnBoards(project).length;
+  if (drawn) {
+    const px = cropEach(project.ratio, ratio);
+    const what = px > 0
+      ? `The frame gets shorter: ${Math.round(px)} px (${Math.round((px / boardHeight(project.ratio)) * 100)} %) is cut off the top and the bottom of every drawing and saved 3D picture, and can't be brought back.`
+      : `The frame gets taller: blank space is added above and below every drawing and saved 3D picture. Nothing is lost.`;
+    const ok = await confirmBox(`Change ${ratioLabel(project.ratio)} → ${ratioLabel(ratio)}? ${drawn === 1 ? "1 board has" : drawn + " boards have"} drawings. ${what} Boards stay 2048 px wide. ${px > 0 ? "Export a project file first if you may want the old frames back." : ""}`, { ok: "Change", danger: px > 0 });
+    if (!ok) return;
+  }
+  await changeRatio(project, ratio, (i, n) => toast(`Reshaping boards… ${i} / ${n}`, 60000));
+  edited();
+  await flush();
+  const at = board?.id;
+  await openProject(project);
+  if (at && byId(at)) await selectBoard(byId(at), true);
+  toast(`Aspect ratio is now ${ratioLabel(ratio)}.`);
 }
 
 // ---------- menus ----------

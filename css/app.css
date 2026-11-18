@@ -522,3 +522,7 @@ fieldset.openings legend { color: var(--muted); font-size: 13px; padding: 0 4px;
 .opening-sizes input { min-width: 0; width: 100%; }
 .opening-add { display: flex; gap: 6px; flex-wrap: wrap; }
 .opening-add button { flex: 1; font-size: 13px; }
+
+/* The project title in the editor's top bar opens the Project dialog (title, aspect ratio). */
+#top-bar button.title { background: transparent; border-color: transparent; padding: 0 6px; font-size: inherit; text-align: left; }
+#top-bar button.title::after { content: " ▾"; color: var(--muted); font-weight: 400; }
