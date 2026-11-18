@@ -1,11 +1,13 @@
 // Adding and editing furniture and figures in the Shot Generator.
 // Furniture belongs to the set, so every scene at the location shares it (SPEC §8.1).
-// Figures belong to the board; a new board starts with the figures of the previous board in its scene.
+// Figures belong to the scene (blocking.js): every board of the scene sees them, unless a board has its own version
+// of a figure ("This board only"). Each named figure wears its character's colour.
 
 import { OBJECTS, FIGURES, FIGURE_COLOURS, byId } from "./catalog.js";
 import { POSES, POSE_ORDER, JOINTS } from "./poses.js";
 import { openMenu, formDialog } from "../ui.js";
-import { uid, sceneOf, orderedBoards } from "../model.js";
+import { uid, sceneOf } from "../model.js";
+import { sceneBlocking, isOwn, setOwn, removeFigure, colourFor, setCharacterColour, syncColours } from "./blocking.js";
 
 const $ = (id) => document.getElementById(id);
 const rad = (d) => (d * Math.PI) / 180;
@@ -15,19 +17,10 @@ const num = (s, fallback) => {
   return isNaN(n) ? fallback : n;
 };
 
-// ctx: { project, board, loc, figures, things, shot(), setChanged(), redraw() }
+// ctx: { project, board, scene, loc, figures (as this board sees them), things, shot(), setChanged(), redraw() }
 let ctx = null;
 let selected = null;
 let selectedJoint = null;   // remembered between figures, so posing several hands in a row is quick
-
-export function figuresFor(project, board) {
-  if (board.shot3d?.figures) return structuredClone(board.shot3d.figures);
-  const scene = orderedBoards(project).filter((b) => b.sceneId === board.sceneId);
-  for (let i = scene.indexOf(board) - 1; i >= 0; i--) {
-    if (scene[i].shot3d?.figures) return structuredClone(scene[i].shot3d.figures);
-  }
-  return [];
-}
 
 export function startPlacing(c) {
   ctx = c;
@@ -39,6 +32,21 @@ export function startPlacing(c) {
 }
 
 const all = () => [...ctx.loc.objects, ...ctx.figures];
+
+// Another board of the same scene: its view of the figures goes into the 3D scene (same ids, so nothing reloads).
+export function setBoard(board, figures) {
+  ctx.board = board;
+  ctx.figures = figures;
+  for (const f of figures) ctx.things.put(f);
+  showSelected();
+}
+
+// Put a figure object in place of another with the same id (a board's own copy ↔ the shared one).
+function swapFigure(next) {
+  const i = ctx.figures.findIndex((f) => f.id === next.id);
+  if (i >= 0) ctx.figures[i] = next;
+  ctx.things.put(next);
+}
 export const selectedItem = () => all().find((i) => i.id === selected) || null;
 
 export function select(id) {
@@ -108,10 +116,12 @@ async function figureDialog(name) {
   const fig = {
     id: uid(), kind: "figure", model: v.model, name: v.name.trim() || "?",
     height: Math.max(30, Math.min(230, num(v.height, entry.height))),
-    colour: FIGURE_COLOURS[ctx.figures.length % FIGURE_COLOURS.length],
+    colour: colourFor(ctx.project, v.name, FIGURE_COLOURS[ctx.figures.length % FIGURE_COLOURS.length]),
     ...at, rot: faceCamera(at.x, at.z),
   };
+  sceneBlocking(ctx.project, ctx.scene).figures.push(fig);   // the scene's, so every board has it
   ctx.figures.push(fig);
+  ctx.setChanged();
   await ctx.things.put(fig);
   select(fig.id);
 }
@@ -133,17 +143,21 @@ export function moveSelected(x, z) {
   it.x = Math.round(x * 100) / 100;
   it.z = Math.round(z * 100) / 100;
   ctx.things.put(it);
-  if (it.kind === "object") ctx.setChanged();
+  ctx.setChanged();
   ctx.redraw();
 }
 
+// A figure leaves the whole scene (every board); a piece of furniture leaves the set.
 export function deleteSelected() {
   const it = selectedItem();
   if (!it) return;
-  const list = it.kind === "object" ? ctx.loc.objects : ctx.figures;
-  list.splice(list.indexOf(it), 1);
+  if (it.kind === "object") ctx.loc.objects.splice(ctx.loc.objects.indexOf(it), 1);
+  else {
+    removeFigure(ctx.project, ctx.scene, it.id);
+    ctx.figures.splice(ctx.figures.indexOf(it), 1);
+  }
   ctx.things.remove(it.id);
-  if (it.kind === "object") ctx.setChanged();
+  ctx.setChanged();
   select(null);
 }
 
@@ -155,9 +169,10 @@ export async function duplicateSelected() {
   copy.id = uid();
   copy.x = Math.round((it.x + 0.5) * 100) / 100;
   if (it.kind === "figure") {
-    copy.colour = FIGURE_COLOURS[ctx.figures.length % FIGURE_COLOURS.length];
     if (copy.lookAt && copy.lookAt !== "camera" && copy.lookAt !== "point") copy.lookAt = it.lookAt;
+    sceneBlocking(ctx.project, ctx.scene).figures.push(copy);
     ctx.figures.push(copy);
+    ctx.setChanged();
   } else {
     ctx.loc.objects.push(copy);
     ctx.setChanged();
@@ -172,7 +187,7 @@ export function dropSelected() {
   if (!it || !it.y) return;
   it.y = 0;
   ctx.things.put(it);
-  if (it.kind === "object") ctx.setChanged();
+  ctx.setChanged();
   showSelected();
   ctx.redraw();
 }
@@ -210,7 +225,9 @@ function showSelected() {
   box.innerHTML = `
     <h3>${isFig ? "Figure" : "Selected"}</h3>
     ${isFig
-      ? `<label><span>Name</span><input data-f="name" autocomplete="off"></label>${numberRow("Height", "height", 30, 230, 1, "cm", byId(it.model).height)}
+      ? `<label class="sg-own" title="On: this board keeps its own position and pose for this figure; the other boards don't follow. Off: shared with every board of the scene."><input type="checkbox" data-f="own"> This board only</label>
+         <label><span>Name</span><input data-f="name" autocomplete="off"></label>
+         <div><span class="muted sg-unit">Colour${it.name && it.name.trim() && it.name.trim() !== "?" ? ` (every ${it.name.trim()} in the project)` : ""}</span><div class="sg-colours">${FIGURE_COLOURS.map((c) => `<button data-colour="${c}" style="background:${c}" aria-label="${c}"></button>`).join("")}</div></div>${numberRow("Height", "height", 30, 230, 1, "cm", byId(it.model).height)}
          <label><span>Pose</span><select data-f="pose">${POSE_ORDER.map((k) => `<option value="${k}">${POSES[k].label}</option>`).join("")}</select></label>
          <label><span>Looks at</span><select data-f="lookAt"><option value="">Where the pose looks</option><option value="camera">The lens</option>${it.lookAt === "point" ? '<option value="point">Where the head was dragged</option>' : ""}${others.map((f) => `<option value="${f.id}">${f.name}</option>`).join("")}</select></label>
          <p class="muted sg-unit">Drag the dots on the figure to pose it: hands and feet move the whole limb, the blue dot raises or lowers the hips, the white one turns the head.</p>
@@ -268,7 +285,7 @@ function showSelected() {
     write(key, Math.round(Math.min(max, Math.max(min, v)) * 10) / 10);
     show(row);
     ctx.things.put(it);
-    if (!isFig) ctx.setChanged();
+    ctx.setChanged();
     ctx.redraw();
   };
   const stepBy = (row, dir, big) => setValue(row, read(row.dataset.key) + dir * Number(row.dataset.step) * (big ? 10 : 1));
@@ -294,8 +311,45 @@ function showSelected() {
       text.value = read(row.dataset.key);
     }, { passive: false });
   }
-  if (name) name.oninput = () => { it.name = name.value; ctx.things.put(it); ctx.redraw(); };
-  const repose = () => { ctx.things.put(it); ctx.redraw(); };
+  if (name) {
+    name.oninput = () => { it.name = name.value; ctx.things.put(it); ctx.setChanged(); ctx.redraw(); };
+    // A finished name takes its character's colour (and shares it from then on).
+    name.onchange = () => {
+      if (it.name.trim() && it.name.trim() !== "?") {
+        it.colour = colourFor(ctx.project, it.name, it.colour);
+        syncColours(ctx.project);
+        ctx.things.put(it);
+        ctx.setChanged();
+        showSelected();
+      }
+    };
+  }
+  const ownBox = box.querySelector("[data-f=own]");
+  if (ownBox) {
+    ownBox.checked = isOwn(ctx.board, it.id);
+    ownBox.onchange = () => {
+      const next = setOwn(ctx.project, ctx.scene, ctx.board, it.id, ownBox.checked);
+      if (next) swapFigure(next);
+      ctx.setChanged();
+      ctx.redraw();
+      showSelected();
+    };
+  }
+  box.querySelectorAll("[data-colour]").forEach((b) => {
+    b.classList.toggle("on", b.dataset.colour === it.colour);
+    b.onclick = () => {
+      const named = it.name && it.name.trim() && it.name.trim() !== "?";
+      if (named) {
+        setCharacterColour(ctx.project, it.name, b.dataset.colour);
+        syncColours(ctx.project);
+      } else it.colour = b.dataset.colour;
+      for (const f of ctx.figures) ctx.things.put(f);
+      ctx.setChanged();
+      ctx.redraw();
+      showSelected();
+    };
+  });
+  const repose = () => { ctx.things.put(it); ctx.setChanged(); ctx.redraw(); };
   // A new pose starts clean: dragged limbs, hip shift and joint turns belong to the old one.
   if (poseSel) poseSel.onchange = () => {
     it.pose = poseSel.value;

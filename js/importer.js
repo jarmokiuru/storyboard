@@ -347,6 +347,8 @@ export async function mergeStarter(project, incoming) {
   for (const c of incoming.characters || []) {
     const mine = project.characters.find((x) => x.name === c.name);
     if (!mine) extra.fills.push(() => project.characters.push({ ...c }));
+    // A character the app made only to hold a figure colour has no body yet: fill it in without asking.
+    else if (!mine.model && mine.height == null) extra.fills.push(() => Object.assign(mine, { model: c.model, height: c.height }, c.colour ? { colour: c.colour } : {}));
     else if (mine.model !== c.model || mine.height !== c.height) {
       extra.changes.push({ text: `Character ${c.name}: ${mine.model} ${mine.height ?? "?"} cm → ${c.model} ${c.height ?? "?"} cm`, apply: () => Object.assign(mine, c) });
     }

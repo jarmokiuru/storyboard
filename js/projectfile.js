@@ -81,6 +81,7 @@ export function normalizeProject(raw) {
   }));
   p.characters = (p.characters || []).filter((c) => c && c.name).map((c) => ({
     name: String(c.name), model: c.model || "adult-male", height: Number(c.height) || null,
+    ...(/^#[0-9a-f]{6}$/i.test(c.colour || "") ? { colour: c.colour } : {}),
   }));
   if (Array.isArray(p.lenses)) p.lenses = p.lenses.map(Number).filter((n) => n > 0);
   else delete p.lenses;

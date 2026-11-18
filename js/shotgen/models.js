@@ -59,7 +59,9 @@ export async function makeFigure(entry, colour) {
     }
   });
   const head = copy.getObjectByName("Head");
-  return { node: copy, size, head };
+  const fig = { node: copy, size, head, colour };
+  fig.paint = (c) => { mat.color.set(c); fig.colour = c; };
+  return fig;
 }
 
 // Scale a figure to a real height in cm (measured from the model itself); the library's rule: the head bone doesn't scale.

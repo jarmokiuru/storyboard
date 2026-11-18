@@ -532,9 +532,11 @@ fieldset.openings legend { color: var(--muted); font-size: 13px; padding: 0 4px;
 #panel .panel-head .shot-name { color: var(--accent); white-space: nowrap; }
 #panel details.psec { padding-bottom: 12px; margin-bottom: 12px; border-bottom: 1px solid var(--line); }
 #panel details.psec:last-child { border-bottom: 0; }
-#panel details.psec[open] { display: grid; gap: 8px; }
-#panel details.psec.buttons[open] { gap: 6px; }
-#panel details.psec > summary { list-style: none; cursor: pointer; display: flex; align-items: center; gap: 6px; min-height: 28px; -webkit-user-select: none; user-select: none; }
+#panel details.psec { display: block; }
+#panel .psec-body { display: grid; gap: 8px; padding-top: 6px; }
+#panel details.psec.buttons .psec-body { grid-template-columns: 1fr 1fr; gap: 6px; }
+#panel details.psec.buttons .psec-body button { min-width: 0; }
+#panel details.psec > summary { display: flex; width: 100%; list-style: none; cursor: pointer; display: flex; align-items: center; gap: 6px; min-height: 28px; -webkit-user-select: none; user-select: none; }
 #panel details.psec > summary::-webkit-details-marker { display: none; }
 #panel details.psec > summary::before { content: "▸"; color: var(--muted); font-size: 12px; width: 10px; transition: transform 0.15s; }
 #panel details.psec[open] > summary::before { transform: rotate(90deg); }
@@ -544,3 +546,16 @@ fieldset.openings legend { color: var(--muted); font-size: 13px; padding: 0 4px;
 #shot-list .num { font-weight: 600; }
 #shot-list .what { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 #shot-list button:not(.on) .what { color: var(--muted); }
+
+/* Shot Generator: the scene's cameras (one per board, v0.22.0). Dot = picture out of date; faint = not framed yet. */
+#sg-cameras { display: flex; flex-wrap: wrap; gap: 4px; }
+#sg-cameras button { min-width: 38px; padding: 0 6px; font-size: 13px; position: relative; }
+#sg-cameras button.on { background: var(--accent); color: var(--accent-text); }
+#sg-cameras button.unset:not(.on) { opacity: 0.6; }
+#sg-cameras button.stale::after { content: ""; position: absolute; top: 3px; right: 3px; width: 7px; height: 7px; border-radius: 50%; background: #f0b429; }
+#sg-rerender { font-size: 13px; }
+.sg-own { display: flex; align-items: center; gap: 8px; font-size: 13px; }
+.sg-colours { display: flex; flex-wrap: wrap; gap: 6px; }
+.sg-colours button { width: 26px; height: 26px; min-height: 0; padding: 0; border-radius: 50%; border: 2px solid transparent; }
+.sg-colours button.on { border-color: var(--accent); }
+#panel details.psec.buttons #shotgen-btn { grid-column: 1 / -1; }

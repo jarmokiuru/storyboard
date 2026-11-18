@@ -46,11 +46,13 @@ export class Things {
   // Add or update one item. Loading a model is the only slow part; placing is instant.
   async put(item) {
     let n = this.nodes.get(item.id);
-    if (n && n.mark && item.kind === "figure" && n.labelName !== item.name) {
-      // Renamed: redraw the plan label.
+    if (n && n.mark && item.kind === "figure" && (n.labelName !== item.name || n.colour !== item.colour)) {
+      // Renamed or recoloured: redraw the plan label, repaint the body.
+      if (n.colour !== item.colour) n.fig?.paint(item.colour);
       n.holder.remove(n.mark);
       n.mark = this.planMark(item, n.size);
       n.labelName = item.name;
+      n.colour = item.colour;
       n.holder.add(n.mark);
     }
     if (!n || n.model !== item.model) {
@@ -68,6 +70,8 @@ export class Things {
       holder.add(made.node);
       n.mark = this.planMark(item, made.size);
       n.labelName = item.name;
+      n.colour = item.colour;
+      if (n.fig && made.colour !== item.colour) made.paint(item.colour);   // recoloured while loading
       holder.add(n.mark);
       n.item = item;
       this.place(n);

@@ -789,10 +789,9 @@ async function openShotGen() {
   } catch (err) {
     return toast("Couldn't open the Shot Generator: " + err.message, 5000);
   }
-  let target = board;   // the board the Shot Generator saves to; moves on with "Save as new board"
   // Returns a note when the board's Lens/Focal had to follow the 3D camera (INTEGRATION.md item 1).
-  const keep = (b, picture, shot3d) => {
-    b.shot3d = shot3d;
+  const keep = async (b, picture, shot3d) => {
+    b.shot3d = { ...(b.shot3d || {}), ...shot3d };
     // Height and tilt also go to the shot data sheet.
     b.camera = { height: shot3d.camera.height, tilt: shot3d.camera.tilt, pan: shot3d.camera.pan, focal: shot3d.camera.focal };
     let note = "";
@@ -805,31 +804,58 @@ async function openShotGen() {
       view.drawReference(picture, "fill");
       renderLayers(b, view.activeLayer);
       fillPanel(project, b);
+    } else {
+      await storeReference(b, picture);   // another camera of the scene, not the board on screen
     }
     edited();
     saveSoon(200);
     return note;
   };
-  mod.openShotGenerator(project, target, {
-    label: boardLabel(project, target),
+  mod.openShotGenerator(project, board, {
+    label: (b) => boardLabel(project, b),
     changed: () => { metaDirty = true; saveSoon(); },
-    close: () => { if (board === target) view.fit(); },
-    save: (picture, shot3d) => {
-      const note = keep(target, picture, shot3d);
-      toast(`Saved to the board's reference layer.${note ? " " + note + "." : ""} Draw over it, or dim it in Layers.`, note ? 5000 : 2600);
+    // Back on the board last looked through.
+    close: async (id) => {
+      const b = byId(id);
+      if (b && b !== board) await selectBoard(b, true);
+      else view.fit();
     },
-    // A new board after the current one, as the next shot (next Kuva #), with this camera view on it.
-    saveAsNew: async (picture, shot3d) => {
+    save: async (id, picture, shot3d) => {
+      const b = byId(id);
+      const note = await keep(b, picture, shot3d);
+      toast(`Saved to board ${boardLabel(project, b)}'s reference layer.${note ? " " + note + "." : ""} Draw over it, or dim it in Layers.`, note ? 5000 : 2600);
+    },
+    // A new board after the one in the Shot Generator, as the next shot (next Kuva #), with this camera view on it.
+    saveAsNew: async (id, picture, shot3d) => {
       await flush();
-      const b = insertBoardAfter(project, target, true);
-      target = b;
+      const b = insertBoardAfter(project, byId(id), true);
       edited();
       refreshStrip();
       await selectBoard(b, true);
-      const note = keep(b, picture, shot3d);
+      const note = await keep(b, picture, shot3d);
       return { board: b, label: boardLabel(project, b), note };
     },
   });
+}
+
+// A 3D picture straight into a board that isn't on screen: its reference layer and its thumbnail.
+async function storeReference(b, picture) {
+  await db.putLayer(b.id, "reference", await store.canvasBlob(picture));
+  b.layers.reference.hasData = true;
+  const flat = await store.flattenStored(b, 320, 320 / project.ratio);
+  const white = document.createElement("canvas");
+  white.width = flat.width;
+  white.height = flat.height;
+  const g = white.getContext("2d");
+  g.fillStyle = "#fff";
+  g.fillRect(0, 0, white.width, white.height);
+  g.drawImage(flat, 0, 0);
+  const thumb = await store.canvasBlob(white, "image/jpeg", 0.8);
+  await db.putThumb(b.id, thumb);
+  dropThumb(b.id);
+  thumbs.set(b.id, URL.createObjectURL(thumb));
+  setThumb($("strip"), b.id, thumbs.get(b.id));
+  metaDirty = true;
 }
 
 async function exportContactSheet(preset = {}) {

@@ -67,10 +67,13 @@
     </div>
     <details class="psec" data-sec="shots" open>
       <summary><h3>Shot list</h3></summary>
+      <div class="psec-body">
       <ol id="shot-list"></ol>
+      </div>
     </details>
     <details class="psec shot" data-sec="shot" open>
       <summary><h3>Shot details</h3></summary>
+      <div class="psec-body">
       <div class="pair">
         <label><span>Kuva #</span><input id="f-kuva" autocomplete="off"></label>
         <label><span>Kuvakoko</span><input id="f-kuvakoko" autocomplete="off"></label>
@@ -84,27 +87,34 @@
       <label><span>Action</span><textarea id="f-action" rows="2"></textarea></label>
       <label><span>Notes</span><textarea id="f-notes" rows="2"></textarea></label>
       <label><span>Scene</span><select id="f-scene"></select></label>
+      </div>
     </details>
     <details class="psec buttons" data-sec="boards" open>
       <summary><h3>Boards</h3></summary>
+      <div class="psec-body">
       <button id="new-board" title="Another board in this shot">New board</button>
       <button id="new-shot" title="Next Kuva # (N)">New shot</button>
       <button id="dup-board">Duplicate</button>
       <button id="del-board" class="danger">Delete board</button>
       <button id="shotgen-btn">Shot Generator</button>
+      </div>
     </details>
     <details class="psec" data-sec="layers" open>
       <summary><h3>Layers</h3></summary>
+      <div class="psec-body">
       <ul id="layers"></ul>
       <button id="clear-layer">Clear active layer</button>
+      </div>
     </details>
     <details class="psec" data-sec="reference" open>
       <summary><h3>Reference</h3></summary>
+      <div class="psec-body">
       <div class="seg">
         <button data-fit="fit" class="on">Fit</button>
         <button data-fit="fill">Fill</button>
       </div>
       <button id="add-photo">Add photo…</button>
+      </div>
     </details>
   </aside>
 
@@ -160,6 +170,11 @@
     <div id="sg-readout"></div>
   </main>
   <aside id="sg-panel">
+    <div class="sg-lens sg-camera-row">
+      <span class="muted">Cameras in this scene (keys 1–9) — the figures are shared by every board</span>
+      <div id="sg-cameras"></div>
+      <button id="sg-rerender" title="Save a new picture to every board of the scene whose 3D picture is out of date">Update pictures</button>
+    </div>
     <div class="sg-lens sg-size-row">
       <span class="muted">Shot size on the chosen figure <span id="sg-listed"></span></span>
       <div id="sg-sizes"></div>
@@ -178,7 +193,7 @@
       <div class="seg" id="sg-shading"><button data-shading="clay">Clay</button><button data-shading="outline">Outline</button></div>
     </div>
     <div id="sg-light"><span class="muted">Light</span></div>
-    <p class="muted sg-hint">Camera view: drag the picture to pan and tilt (it follows your finger); pinch or scroll to zoom the lens. Top view: drag the camera to move it, the tip of its yellow lines to aim it, the floor to look around; pinch or scroll to zoom. Tap the small view to swap. Add furniture and figures with Add; tap one to choose it, drag it in the top view to move it. A chosen figure shows dots: drag a hand or foot to move the limb, an elbow or knee to bend it, the blue dot to raise or lower the hips, the white dot to turn the head.<br>Mac keys: W A S D move, arrows pan and tilt, R / F up and down, hold Shift to go faster, Z / X roll, T top view ↔ camera view, [ wider lens, ] longer lens, Backspace delete the chosen piece, Esc let go of it (again: back to the board), Cmd-D duplicate, Cmd-B drop to the floor, Cmd-K Clay ↔ Outline.</p>
+    <p class="muted sg-hint">Camera view: drag the picture to pan and tilt (it follows your finger); pinch or scroll to zoom the lens. Top view: drag the camera to move it, the tip of its yellow lines to aim it, the floor to look around; pinch or scroll to zoom. Tap the small view to swap. Add furniture and figures with Add; tap one to choose it, drag it in the top view to move it. A chosen figure shows dots: drag a hand or foot to move the limb, an elbow or knee to bend it, the blue dot to raise or lower the hips, the white dot to turn the head.<br>Mac keys: 1–9 camera (board) of this scene, W A S D move, arrows pan and tilt, R / F up and down, hold Shift to go faster, Z / X roll, T top view ↔ camera view, [ wider lens, ] longer lens, Backspace delete the chosen piece, Esc let go of it (again: back to the board), Cmd-D duplicate, Cmd-B drop to the floor, Cmd-K Clay ↔ Outline.</p>
     <label class="sg-check"><input type="checkbox" id="sg-speed"> Show speed (frames per second while moving)</label>
   </aside>
 </section>

@@ -1,5 +1,6 @@
 // Shot Generator screen: opens full screen from a board, edits the set, furniture, figures and camera, and saves
-// the camera view to the board's reference layer.
+// the camera view to the board's reference layer. One 3D space per scene (v0.22.0): the figures are the scene's
+// (blocking.js); each board of the scene is a camera, stepped through with the Cameras row or keys 1–9.
 
 import * as THREE from "three";
 import { Stage, LIGHT } from "./stage.js";
@@ -13,9 +14,10 @@ import { locationFile, readLocationFile } from "../location-file.js";
 import { parseLens } from "../lens.js";
 import { Things } from "./things.js";
 import { SIZES, frameSize, sizeFromKuvakoko } from "./framing.js";
-import { figuresFor, startPlacing, addMenu, select, selectedItem, moveSelected, deleteSelected, duplicateSelected, dropSelected, subjectDistance, refreshSelected } from "./placing.js";
+import { startPlacing, setBoard as placingBoard, addMenu, select, selectedItem, moveSelected, deleteSelected, duplicateSelected, dropSelected, subjectDistance, refreshSelected } from "./placing.js";
 import { uid, sceneOf, orderedBoards, BOARD_WIDTH, boardHeight, heading, readRoom, roomOpenings } from "../model.js";
 import { openingsEditor } from "./openings-editor.js";
+import { sceneBlocking, boardFigures, syncColours, pictureStale, setStamp } from "./blocking.js";
 
 const $ = (id) => document.getElementById(id);
 const SLIDERS = [
@@ -26,7 +28,8 @@ const SLIDERS = [
 ];
 
 let stage = null;
-let project, board, loc, shot, hooks, figures;
+let project, board, scene, loc, shot, hooks, figures;
+let loaded = "";   // the camera and light as they were when this board was opened, to tell whether they changed
 let light = { ...LIGHT };   // sun direction and height, sun strength, fill, outside brightness (stage.js LIGHT)
 let zoomRange = null;   // when the board's Lens/Focal is a zoom, e.g. [24, 70]
 let drag = null;
@@ -58,17 +61,18 @@ const sensor = () => sensorById(project.sensor || DEFAULT_SENSOR);
 // ---------- open / close ----------
 
 // hooks: save(canvas, shot3d) — put the picture on the board; changed() — project data changed; close()
+// hooks: save(boardId, canvas, shot3d) — put the picture on that board; changed() — project data changed;
+// close(boardId) — back to the editor, on the board last looked through; label(board) — a board's name, e.g. "3a".
 export function openShotGenerator(p, b, h) {
   project = p;
   board = b;
   hooks = h;
-  loc = locationFor(project, sceneOf(project, board));
+  scene = sceneOf(project, board);
+  loc = locationFor(project, scene);
   if (!Array.isArray(loc.room.openings)) loc.room = readRoom(loc.room);   // stored before openings[] (v0.19.0)
-  shot = { ...defaultShot(loc.room), ...(board.shot3d?.camera || {}) };
-  // A board without a 3D camera yet starts on its shot-list lens (INTEGRATION.md item 1).
-  const lens = parseLens(board.lens);
-  zoomRange = lens?.range ?? null;
-  if (!board.shot3d && lens) shot.focal = lens.focal;
+  sceneBlocking(project, scene);   // made from the boards' own figures the first time (blocking.js)
+  syncColours(project);
+  cameraFor(board, null);
   if (!stage) {
     stage = new Stage($("sg-canvas"));
     // The panel is only rebuilt when a model finishes loading, never while someone is typing in it.
@@ -77,26 +81,112 @@ export function openShotGenerator(p, b, h) {
     bind();
   }
   $("shotgen").hidden = false;
-  $("sg-title").textContent = `${loc.name} · Board ${h.label}`;
+  showTitle();
   buildControls();
   stage.setSet(loc.room);
   showPlan();
-  figures = figuresFor(project, board);
+  figures = boardFigures(project, scene, board);
   light = lightFor(project, board);
+  loaded = camLightText();
   showLight();
   showShading();
   placeAll();
   apply();
+  showCameras();
   stage.resize();
   hooks.changed();
+}
+
+const showTitle = () => ($("sg-title").textContent = `${loc.name} · Board ${hooks.label(board)}`);
+
+// The camera a board starts with: its own, else (a board not framed yet) the camera just looked through, or the
+// default; either way on the board's shot-list lens (INTEGRATION.md item 1).
+function cameraFor(b, from) {
+  shot = { ...defaultShot(loc.room), ...(from || {}), ...(b.shot3d?.camera || {}) };
+  const lens = parseLens(b.lens);
+  zoomRange = lens?.range ?? null;
+  if (!b.shot3d?.camera && lens) shot.focal = lens.focal;
+}
+
+const camLightText = () => JSON.stringify([shot, light]);
+
+// The camera and light stay with the board when you step to another camera or leave, even without saving a picture.
+function keepCamera() {
+  if (!board || camLightText() === loaded) return;
+  const { dir, ...rest } = light;
+  board.shot3d = { ...(board.shot3d || {}), locationId: loc.id, camera: { ...shot }, sun: dir, light: rest };
+  loaded = camLightText();
+  hooks.changed();
+}
+
+// ---------- cameras: the scene's boards ----------
+
+const sceneBoardsInOrder = () => orderedBoards(project).filter((b) => b.sceneId === scene.id);
+
+// A board needs a new picture when its saved 3D picture is out of date, or it has a camera but its reference layer
+// is still empty. A reference that isn't a 3D picture (a photo) is never replaced.
+const needsPicture = (b) => pictureStale(project, scene, b, loc) || (!!b.shot3d?.camera && !b.shot3d.figures && !b.layers?.reference?.hasData);
+
+function showCameras() {
+  const row = $("sg-cameras");
+  row.innerHTML = "";
+  sceneBoardsInOrder().forEach((b, i) => {
+    const btn = document.createElement("button");
+    btn.dataset.board = b.id;
+    btn.textContent = hooks.label(b);
+    btn.title = `Board ${hooks.label(b)}${i < 9 ? ` (key ${i + 1})` : ""}${b.kuvakoko ? " · " + b.kuvakoko : ""}`;
+    btn.classList.toggle("on", b === board);
+    btn.classList.toggle("stale", needsPicture(b));
+    btn.classList.toggle("unset", !b.shot3d?.camera);
+    row.append(btn);
+  });
+  const n = sceneBoardsInOrder().filter(needsPicture).length;
+  $("sg-rerender").textContent = n ? `Update ${n === 1 ? "1 picture" : n + " pictures"}` : "All pictures up to date";
+  $("sg-rerender").disabled = !n;
+}
+
+// Step to another board of the scene: this camera stays with this board, the figures stay where they are (the
+// board's own versions swap in), the light follows the board.
+function switchTo(b) {
+  if (!b || b === board) return;
+  keepCamera();
+  const from = { ...shot };
+  board = b;
+  cameraFor(board, from);
+  light = lightFor(project, board);
+  figures = boardFigures(project, scene, board);
+  loaded = camLightText();
+  placingBoard(board, figures);
+  showLight();
+  showTitle();
+  markListedSize();
+  apply();
+  showCameras();
+}
+
+// Make every out-of-date picture in the scene again, each through its own board's camera and light.
+async function rerenderAll() {
+  keepCamera();
+  const todo = sceneBoardsInOrder().filter(needsPicture);
+  if (!todo.length) return;
+  const back = board;
+  let done = 0;
+  for (const b of todo) {
+    switchTo(b);
+    toast(`Updating pictures… ${++done} / ${todo.length}`, 60000);
+    await hooks.save(b.id, picture(), shot3d());
+  }
+  switchTo(back);
+  showCameras();
+  toast(`${todo.length === 1 ? "1 picture" : todo.length + " pictures"} updated.`);
 }
 
 // Furniture from the set and figures from the board, into the 3D scene.
 function placeAll() {
   startPlacing({
-    project, board, loc, figures, things: stage.things,
+    project, board, scene, loc, figures, things: stage.things,
     shot: () => shot,
-    setChanged: () => hooks.changed(),
+    setChanged: () => { hooks.changed(); showCameras(); },
     redraw: () => { stage.request(); readout(); },
   });
 }
@@ -107,15 +197,20 @@ function showPlan() {
 }
 
 function close() {
+  keepCamera();
   $("shotgen").hidden = true;
-  hooks.close();
+  hooks.close(board.id);
 }
 
 const picture = () => stage.snapshot(BOARD_WIDTH, boardHeight(project.ratio));
 // Saved as shot3d.sun (direction, as in v0.11.0) plus shot3d.light (the rest).
+// savedCamera, savedLight, setStamp and figures record what the picture showed, so a later change marks it out of date.
 const shot3d = () => {
   const { dir, ...rest } = light;
-  return { locationId: loc.id, camera: { ...shot }, figures: structuredClone(figures), sun: dir, light: rest };
+  return {
+    locationId: loc.id, camera: { ...shot }, figures: structuredClone(figures), sun: dir, light: rest,
+    savedCamera: { ...shot }, savedLight: { sun: dir, light: rest }, setStamp: setStamp(project, loc),
+  };
 };
 
 const readLight = (b) => (b.shot3d?.sun != null ? { ...LIGHT, ...(b.shot3d.light || {}), dir: b.shot3d.sun } : null);
@@ -175,20 +270,25 @@ function showLight() {
   $("sg-light").querySelector("[data-light-walls]").checked = !!light.walls;
 }
 
-function save() {
-  hooks.save(picture(), shot3d());
+async function save() {
+  await hooks.save(board.id, picture(), shot3d());
+  loaded = camLightText();
   close();
 }
 
 
 // Storyboarder's "insert as new shot": keep working here, now on the new board.
 async function saveAsNew() {
-  const made = await hooks.saveAsNew(picture(), shot3d());
+  keepCamera();
+  const made = await hooks.saveAsNew(board.id, picture(), shot3d());
   board = made.board;
-  hooks.label = made.label;
+  figures = boardFigures(project, scene, board);
+  placingBoard(board, figures);
+  loaded = camLightText();
   zoomRange = parseLens(board.lens)?.range ?? null;
   markListedSize();
-  $("sg-title").textContent = `${loc.name} · Board ${made.label}`;
+  showTitle();
+  showCameras();
   toast(`Saved as new board ${made.label}.${made.note ? " " + made.note + "." : ""} Keep framing, or go back to the board.`, 4000);
 }
 
@@ -454,7 +554,7 @@ async function setDialog() {
   delete room.door;
   delete room.window;
   loc.room = room;
-  $("sg-title").textContent = `${loc.name} · Board ${hooks.label}`;
+  showTitle();
   stage.setSet(loc.room);
   hooks.changed();
 }
@@ -481,6 +581,11 @@ function bind() {
     stage.resize();
   };
   document.querySelectorAll("#sg-views [data-view]").forEach((b) => (b.onclick = () => setView(b.dataset.view)));
+  $("sg-cameras").onclick = (e) => {
+    const id = e.target.closest("[data-board]")?.dataset.board;
+    if (id) switchTo(project.boards.find((b) => b.id === id));
+  };
+  $("sg-rerender").onclick = rerenderAll;
   $("sg-sensor").onchange = (e) => { project.sensor = e.target.value; apply(); hooks.changed(); };
   $("sg-lenses").onclick = (e) => {
     const f = Number(e.target.dataset?.focal);
@@ -688,6 +793,7 @@ function move(e) {
 function up(e) {
   touches.delete(e.pointerId);
   if (!drag) return;
+  if (drag.id === e.pointerId && !drag.tap && drag.mode !== "pinch") { hooks.changed(); showCameras(); }   // a figure or piece may have moved
   if (drag.mode === "joint" && drag.id === e.pointerId) refreshSelected();
   if (drag.mode === "swap") {
     if (drag.tap && drag.id === e.pointerId) setView(stage.view === "camera" ? "top" : "camera");
@@ -789,6 +895,7 @@ function keys(e) {
     escape: () => (selectedItem() ? select(null) : close()),
     t: () => setView(stage.view === "top" ? "camera" : "top"),
     "[": () => stepLens(-1),
+    ...Object.fromEntries([1, 2, 3, 4, 5, 6, 7, 8, 9].map((n) => [String(n), () => switchTo(sceneBoardsInOrder()[n - 1])])),
     "]": () => stepLens(1),
   };
   if (!other[key]) return;

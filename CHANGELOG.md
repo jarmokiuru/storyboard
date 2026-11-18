@@ -1,5 +1,15 @@
 # Changelog
 
+## 2026-11-18 — Storyboard v0.22.0 (one 3D space per scene)
+- **Shared blocking:** the figures belong to the scene. Every board of the scene sees the same actors, so move an actor once and every camera sees it.
+- **This board only:** tick it in a figure's panel and that board keeps its own position and pose for the figure, for actors who move during the scene. Untick it to follow the shared blocking again.
+- **Cameras:** a row at the top of the Shot Generator panel lists the scene's boards (keys 1–9 on the Mac). Tap one to look through that board's camera. Each board keeps its own camera and light, even without saving a picture. A board not framed yet starts from the camera you came from, on its shot-list lens.
+- **Update pictures:** a yellow dot marks a board whose 3D picture is out of date (blocking, camera, light, set or colours changed) or that has a camera but no picture yet. One button saves fresh pictures to all of them. Photos on the reference layer are never replaced.
+- **One colour per character:** a named figure (e.g. A) has the same colour in every scene and board. Change it in the figure panel and it changes everywhere.
+- Leaving the Shot Generator lands on the board you last looked through.
+- Board editor panel: the Boards buttons sit in two columns, and every section title sits on its own line above the section.
+- Scenes framed before this version: the shared blocking is taken from the last board with figures. Boards whose figures differed keep them as *This board only*, so their pictures can be made again as they were.
+
 ## 2026-11-18 — Storyboard v0.21.0 (shot list in the panel)
 - The board editor's right-hand panel starts with the slugline and the shot, e.g. "8. INT POLICE STATION - PRESS ROOM - LATER / Shot 1a".
 - New **Shot list** section: every shot of the scene with its Kuvakoko and Sisältö. Tap one to jump to its first board. The current shot is highlighted, and a shot with several boards shows the count, e.g. "2 (3)".
