@@ -14,11 +14,12 @@ import { locationFile, readLocationFile } from "../location-file.js";
 import { parseLens } from "../lens.js";
 import { Things } from "./things.js";
 import { SIZES, frameSize, sizeFromKuvakoko } from "./framing.js";
-import { startPlacing, setBoard as placingBoard, addMenu, select, selectedItem, moveSelected, deleteSelected, duplicateSelected, dropSelected, subjectDistance, refreshSelected } from "./placing.js";
+import { startPlacing, setBoard as placingBoard, addMenu, select, selectedItem, chosenItems, isChosen, lead, chooseAllFigures, setSeveral, severalOn, moveSelected, deleteSelected, duplicateSelected, dropSelected, subjectDistance, refreshSelected } from "./placing.js";
 import { uid, sceneOf, orderedBoards, BOARD_WIDTH, boardHeight, heading, readRoom, roomOpenings } from "../model.js";
 import { openingsEditor } from "./openings-editor.js";
 import { sceneBlocking, boardFigures, syncColours, pictureStale, setStamp } from "./blocking.js";
 import { makeUndo } from "./undo.js";
+import { foldable } from "../fold.js";
 
 const $ = (id) => document.getElementById(id);
 const SLIDERS = [
@@ -627,6 +628,13 @@ async function setDialog() {
 
 function bind() {
   $("sg-back").onclick = close;
+  foldable($("sg-panel"), "storyboard.sg-panel-folded");   // folded sections, remembered per device
+  $("sg-several").onclick = () => {
+    setSeveral(!severalOn());
+    $("sg-several").classList.toggle("on", severalOn());
+  };
+  $("sg-all-figs").onclick = chooseAllFigures;
+  $("sg-none").onclick = () => select(null);
   $("sg-undo").onclick = () => undoRedo(true);
   $("sg-redo").onclick = () => undoRedo(false);
   document.addEventListener("pointerdown", (e) => pressed.add(e.pointerId), true);
@@ -688,14 +696,7 @@ function bind() {
     const key = e.target.dataset?.lightReset;
     if (key) setLightValue(key, LIGHT[key]);
   });
-  // Scrolling over a light row steps it (Shift = ×5).
-  $("sg-light").addEventListener("wheel", (e) => {
-    const input = e.target.closest?.(".sg-slider")?.querySelector("input");
-    if (!input) return;
-    e.preventDefault();
-    const key = input.dataset.light;
-    setLightValue(key, light[key] + Number(input.step) * (e.shiftKey ? 5 : 1) * (e.deltaY < 0 ? 1 : -1));
-  }, { passive: false });
+  // No scroll-to-change on the panel: scrolling only scrolls it (Jarmo, 2026-11-18).
   $("sg-sizes").onclick = (e) => {
     const id = e.target.dataset?.size;
     if (id) frameAt(id);
@@ -711,15 +712,6 @@ function bind() {
     const f = num(e.target.value, shot.focal);
     if (f >= 4 && f <= 1200) { shot.focal = f; apply(); }
   };
-  // Scrolling over a camera slider steps it (Shift = ×10).
-  $("sg-sliders").addEventListener("wheel", (e) => {
-    const input = e.target.closest?.(".sg-slider")?.querySelector("input");
-    if (!input) return;
-    e.preventDefault();
-    const step = Number(input.step) * (e.shiftKey ? 10 : 1) * (e.deltaY < 0 ? 1 : -1);
-    input.value = Math.min(Number(input.max), Math.max(Number(input.min), Number(input.value) + step));
-    input.dispatchEvent(new Event("input", { bubbles: true }));
-  }, { passive: false });
   $("sg-sliders").addEventListener("input", (e) => {
     const key = e.target.dataset?.key;
     if (key) { shot[key] = Number(e.target.value); apply(); }
@@ -793,9 +785,14 @@ function planGrab(e, p, rect, isMain = false) {
   if (Math.hypot(g.x - shot.x, g.z - shot.z) < near) return { mode: "move", id: e.pointerId, rect };
   const item = stage.things.hitPlan(g.x, g.z, near * 0.3);
   if (item) {
-    select(item);
+    // Several chosen and one of them pressed: drag them all. A tap (no drag) then chooses just it — or, adding
+    // (Several on, or Shift), takes it out of the choice.
+    const add = severalOn() || e.shiftKey;
+    const group = isChosen(item) && (add || chosenItems().length > 1);
+    if (group) lead(item);
+    else select(item, add);
     const it = selectedItem();
-    return { mode: "item", id: e.pointerId, rect, dx: it.x - g.x, dz: it.z - g.z };
+    return { mode: "item", id: e.pointerId, rect, dx: it.x - g.x, dz: it.z - g.z, item, start: p, tap: group, tapAdd: add };
   }
   if (Math.hypot(g.x - aim.x, g.z - aim.z) < near) return { mode: "aim", id: e.pointerId, rect };
   return isMain ? { mode: "map", id: e.pointerId, x: p.x, y: p.y, cx: stage.top.cx, cz: stage.top.cz, rect, tap: true } : null;
@@ -866,8 +863,10 @@ function up(e) {
   if (drag.mode === "joint" && drag.id === e.pointerId) refreshSelected();
   if (drag.mode === "swap") {
     if (drag.tap && drag.id === e.pointerId) setView(stage.view === "camera" ? "top" : "camera");
+  } else if (drag.mode === "item") {
+    if (drag.tap && drag.id === e.pointerId) select(drag.item, drag.tapAdd);
   } else if (drag.tap && drag.id === e.pointerId) {
-    tapSelect(local(e), drag);
+    tapSelect(local(e), drag, severalOn() || e.shiftKey);
   }
   if (drag.mode === "pinch" ? touches.size === 0 : drag.id === e.pointerId) drag = null;
 }
@@ -897,14 +896,15 @@ function viewCamera(rect) {
 }
 
 // A tap without dragging picks what's under it (or clears the choice when it hits nothing).
-function tapSelect(p, d) {
+// add: put the tapped piece into the choice (or take it out); a tap on nothing then changes nothing.
+function tapSelect(p, d, add = false) {
   if (stage.view === "top") {
     const g = stage.topToGround(p.x, p.y, d.rect);
-    return select(stage.things.hitPlan(g.x, g.z, 0.1));
+    return select(stage.things.hitPlan(g.x, g.z, 0.1), add);
   }
   const r = d.rect;
   const ndc = { x: ((p.x - r.x) / r.w) * 2 - 1, y: 1 - ((p.y - r.y) / r.h) * 2 };
-  select(stage.things.hitView(ndc, stage.view === "camera" ? stage.shotCam : stage.orbitCam));
+  select(stage.things.hitView(ndc, stage.view === "camera" ? stage.shotCam : stage.orbitCam), add);
 }
 
 function wheel(e) {

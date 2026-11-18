@@ -1,6 +1,7 @@
 // The right-hand panel: slugline + shot name, the scene's shot list, shot details, board buttons, layers and
 // reference photo. SPEC §6.1, §6.4, §6.6. Every section folds; which ones are open is remembered on the device.
 
+import { foldable } from "./fold.js";
 import { LAYERS, LAYER_LABELS, heading, boardLabel, sceneOf, sceneBoards } from "./model.js";
 
 const $ = (id) => document.getElementById(id);
@@ -16,16 +17,7 @@ export function initPanel(h) {
       if (shown && ["kuva", "kuvakoko", "sisalto"].includes(f)) renderShotList(shown.project, shown.board);
     });
   }
-  // Folded sections, remembered per device.
-  let folded = [];
-  try { folded = JSON.parse(localStorage.getItem(FOLD_KEY)) || []; } catch { /* first run */ }
-  document.querySelectorAll("#panel details.psec").forEach((d) => {
-    d.open = !folded.includes(d.dataset.sec);
-    d.addEventListener("toggle", () => {
-      const now = [...document.querySelectorAll("#panel details.psec")].filter((x) => !x.open).map((x) => x.dataset.sec);
-      try { localStorage.setItem(FOLD_KEY, JSON.stringify(now)); } catch { /* not essential */ }
-    });
-  });
+  foldable($("panel"), FOLD_KEY);   // folded sections, remembered per device
   $("shot-list").addEventListener("click", (e) => {
     const b = e.target.closest("button[data-board]");
     if (b) h.jump(b.dataset.board);

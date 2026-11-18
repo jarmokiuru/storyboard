@@ -19,13 +19,16 @@ const num = (s, fallback) => {
 
 // ctx: { project, board, scene, loc, figures (as this board sees them), things, shot(), setChanged(), redraw() }
 let ctx = null;
-let selected = null;
+let selected = null;           // the chosen piece or figure (with several chosen: the one last tapped)
+let chosen = new Set();        // every chosen id (Jarmo, 2026-11-18: change eye lines and more in one go)
+let several = false;           // "Several" switched on: taps add to the choice (Shift-click does the same)
 let selectedJoint = null;   // remembered between figures, so posing several hands in a row is quick
 
 export function startPlacing(c) {
   ctx = c;
   ctx.loc.objects = ctx.loc.objects || [];
   selected = null;
+  chosen = new Set();
   ctx.things.clear();
   for (const item of [...ctx.loc.objects, ...ctx.figures]) ctx.things.put(item).then(() => item.kind === "object" && ctx.setChanged());
   showSelected();
@@ -48,10 +51,46 @@ function swapFigure(next) {
   ctx.things.put(next);
 }
 export const selectedItem = () => all().find((i) => i.id === selected) || null;
+export const chosenItems = () => all().filter((i) => chosen.has(i.id));
+export const isChosen = (id) => chosen.has(id);
+export const severalOn = () => several;
 
-export function select(id) {
-  selected = id;
-  ctx.things.select(id);
+// Choose one piece or figure (id null: none). add: put it into the choice, or take it out if it is already there.
+export function select(id, add = false) {
+  chosen = new Set([...chosen].filter((x) => all().some((i) => i.id === x)));   // forget anything deleted
+  if (add) {
+    if (!id) return;
+    if (chosen.has(id)) {
+      chosen.delete(id);
+      if (selected === id) selected = [...chosen].pop() || null;
+    } else {
+      chosen.add(id);
+      selected = id;
+    }
+  } else {
+    selected = id;
+    chosen = new Set(id ? [id] : []);
+  }
+  showChoice();
+}
+
+// Several chosen and one of them pressed: it leads (for dragging and shot sizes), the rest stay chosen.
+export function lead(id) {
+  if (chosen.has(id)) selected = id;
+}
+
+export function chooseAllFigures() {
+  chosen = new Set(ctx.figures.map((f) => f.id));
+  selected = ctx.figures.at(-1)?.id ?? null;
+  showChoice();
+}
+
+export function setSeveral(on) {
+  several = on;
+}
+
+function showChoice() {
+  ctx.things.select(chosen.size === 1 ? selected : null, chosen);   // joint dots only with one figure chosen
   showSelected();
   ctx.redraw();
 }
@@ -145,56 +184,68 @@ async function addObject(entry) {
 
 // ---------- editing the selected item ----------
 
+// Dragging the leading piece moves every chosen one by the same amount.
 export function moveSelected(x, z) {
   const it = selectedItem();
   if (!it) return;
-  it.x = Math.round(x * 100) / 100;
-  it.z = Math.round(z * 100) / 100;
-  ctx.things.put(it);
+  const dx = Math.round(x * 100) / 100 - it.x;
+  const dz = Math.round(z * 100) / 100 - it.z;
+  for (const i of chosenItems()) {
+    i.x = Math.round((i.x + dx) * 100) / 100;
+    i.z = Math.round((i.z + dz) * 100) / 100;
+    ctx.things.put(i);
+  }
   ctx.setChanged();
   ctx.redraw();
 }
 
 // A figure leaves the whole scene (every board); a piece of furniture leaves the set.
 export function deleteSelected() {
-  const it = selectedItem();
-  if (!it) return;
-  if (it.kind === "object") ctx.loc.objects.splice(ctx.loc.objects.indexOf(it), 1);
-  else {
-    removeFigure(ctx.project, ctx.scene, it.id);
-    ctx.figures.splice(ctx.figures.indexOf(it), 1);
+  const items = chosenItems();
+  if (!items.length) return;
+  for (const it of items) {
+    if (it.kind === "object") ctx.loc.objects.splice(ctx.loc.objects.indexOf(it), 1);
+    else {
+      removeFigure(ctx.project, ctx.scene, it.id);
+      ctx.figures.splice(ctx.figures.indexOf(it), 1);
+    }
+    ctx.things.remove(it.id);
   }
-  ctx.things.remove(it.id);
   ctx.setChanged();
   select(null);
 }
 
 // Cmd-D, as in Storyboarder: a copy of the chosen piece or figure, half a metre to the east, then chosen.
+// With several chosen, every one is copied and the copies become the choice.
 export async function duplicateSelected() {
-  const it = selectedItem();
-  if (!it) return;
-  const copy = JSON.parse(JSON.stringify(it));
-  copy.id = uid();
-  copy.x = Math.round((it.x + 0.5) * 100) / 100;
-  if (it.kind === "figure") {
-    if (copy.lookAt && copy.lookAt !== "camera" && copy.lookAt !== "point") copy.lookAt = it.lookAt;
-    sceneBlocking(ctx.project, ctx.scene).figures.push(copy);
-    ctx.figures.push(copy);
-    ctx.setChanged();
-  } else {
-    ctx.loc.objects.push(copy);
-    ctx.setChanged();
+  const items = chosenItems();
+  if (!items.length) return;
+  const copies = [];
+  for (const it of items) {
+    const copy = JSON.parse(JSON.stringify(it));
+    copy.id = uid();
+    copy.x = Math.round((it.x + 0.5) * 100) / 100;
+    if (it.kind === "figure") {
+      sceneBlocking(ctx.project, ctx.scene).figures.push(copy);
+      ctx.figures.push(copy);
+    } else ctx.loc.objects.push(copy);
+    copies.push(copy);
   }
-  await ctx.things.put(copy);
-  select(copy.id);
+  ctx.setChanged();
+  await Promise.all(copies.map((c) => ctx.things.put(c)));
+  chosen = new Set(copies.map((c) => c.id));
+  selected = copies.at(-1).id;
+  showChoice();
 }
 
 // Cmd-B, Storyboarder's "drop": the chosen piece or figure back down to the floor (elevation 0).
 export function dropSelected() {
-  const it = selectedItem();
-  if (!it || !it.y) return;
-  it.y = 0;
-  ctx.things.put(it);
+  const items = chosenItems().filter((i) => i.y);
+  if (!items.length) return;
+  for (const it of items) {
+    it.y = 0;
+    ctx.things.put(it);
+  }
   ctx.setChanged();
   showSelected();
   ctx.redraw();
@@ -209,8 +260,8 @@ export function subjectDistance() {
   return Math.hypot(it.x - s.x, eye - s.height / 100, it.z - s.z);
 }
 
-// A number with its own slider: drag the slider, type in the box, use ↑/↓ in the box (Shift = ×10),
-// or scroll over either.
+// A number with its own slider: drag the slider, type in the box, or use ↑/↓ in the box (Shift = ×10).
+// Scrolling doesn't change it (scrolling only scrolls the panel).
 // reset: the value ↺ goes back to.
 function numberRow(label, key, min, max, step, unit, reset) {
   return `<div class="sg-num" data-key="${key}" data-min="${min}" data-max="${max}" data-step="${step}" data-reset="${reset}">
@@ -226,6 +277,7 @@ function showSelected() {
   const it = selectedItem();
   box.hidden = !it;
   if (!it) return;
+  if (chosen.size > 1) return showGroup(box);
   const isFig = it.kind === "figure";
   const own = ctx.things.sizeOf(it.id);   // the model's own size, for ↺
   const ownCm = (v, fallback) => (own ? Math.round(v * 100) : fallback);
@@ -313,11 +365,6 @@ function showSelected() {
       if (e.key === "Enter") text.blur();
     };
     row.querySelector(".sg-zero").onclick = () => { setValue(row, Number(row.dataset.reset)); text.value = read(row.dataset.key); };
-    row.addEventListener("wheel", (e) => {
-      e.preventDefault();
-      stepBy(row, e.deltaY < 0 ? 1 : -1, e.shiftKey);
-      text.value = read(row.dataset.key);
-    }, { passive: false });
   }
   if (name) {
     name.oninput = () => { it.name = name.value; ctx.things.put(it); ctx.setChanged(); ctx.redraw(); };
@@ -382,6 +429,52 @@ function showSelected() {
       rows.filter((r) => axis(r.dataset.key) >= 0).forEach(show);
       repose();
     }
+  };
+}
+
+// Several chosen: what they can all change at once — eye line and pose for the figures; drop, delete, let go.
+function showGroup(box) {
+  const items = chosenItems();
+  const figs = items.filter((i) => i.kind === "figure");
+  const pieces = items.length - figs.length;
+  const count = (n, one, many) => `${n} ${n === 1 ? one : many}`;
+  const same = (key, fallback = "") => {
+    const vals = new Set(figs.map((f) => f[key] || fallback));
+    return vals.size === 1 ? [...vals][0] : "mixed";
+  };
+  const mixed = '<option value="mixed" disabled>— not all the same —</option>';
+  const names = ctx.figures.map((f) => `<option value="${f.id}">${f.name}</option>`).join("");
+  box.innerHTML = `
+    <h3>${items.length} chosen</h3>
+    <p class="muted sg-unit">${[figs.length ? count(figs.length, "figure", "figures") : "", pieces ? count(pieces, "piece", "pieces") : ""].filter(Boolean).join(", ")}. Drag one in the top view to move them all.</p>
+    ${figs.length ? `<label><span>Looks at</span><select data-g="lookAt">${mixed}<option value="">Where the pose looks</option><option value="camera">The lens</option>${names}</select></label>
+    <p class="muted sg-unit">A figure chosen as the one to look at keeps its own eye line.</p>
+    <label><span>Pose</span><select data-g="pose">${mixed}${POSE_ORDER.map((k) => `<option value="${k}">${POSES[k].label}</option>`).join("")}</select></label>` : ""}
+    <div class="sg-sel-buttons"><button data-act="drop">Drop to floor</button><button data-act="delete" class="danger">Delete ${items.length}</button><button data-act="done">Let go</button></div>`;
+  const lookSel = box.querySelector("[data-g=lookAt]");
+  const poseSel = box.querySelector("[data-g=pose]");
+  if (lookSel) lookSel.value = same("lookAt") === "point" ? "mixed" : same("lookAt");
+  if (poseSel) poseSel.value = same("pose", "stand");
+  const done = () => { for (const f of figs) ctx.things.put(f); ctx.setChanged(); ctx.redraw(); showSelected(); };
+  if (lookSel) lookSel.onchange = () => {
+    for (const f of figs) if (f.id !== lookSel.value) f.lookAt = lookSel.value;
+    done();
+  };
+  if (poseSel) poseSel.onchange = () => {
+    for (const f of figs) {
+      f.pose = poseSel.value;
+      delete f.manual;
+      delete f.hipsShift;
+      f.joints = {};
+      if (f.lookAt === "point") f.lookAt = "";
+    }
+    done();
+  };
+  box.onclick = (e) => {
+    const act = e.target.dataset?.act;
+    if (act === "drop") dropSelected();
+    if (act === "delete") deleteSelected();
+    if (act === "done") select(null);
   };
 }
 

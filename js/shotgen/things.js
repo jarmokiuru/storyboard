@@ -173,8 +173,10 @@ export class Things {
     return sprite;
   }
 
-  select(id) {
+  // id: the one figure that shows joint dots (null with several chosen); chosen: every highlighted id.
+  select(id, chosen = new Set(id ? [id] : [])) {
     this.selectedId = id;
+    this.chosen = chosen;
     for (const n of this.nodes.values()) this.paintSelection(n);
     this.showHandles();
     this.onChange();
@@ -248,7 +250,7 @@ export class Things {
   }
 
   paintSelection(n) {
-    const on = n.item.id === this.selectedId;
+    const on = n.item.id === this.selectedId || !!this.chosen?.has(n.item.id);
     n.holder.children[0]?.traverse((m) => {
       for (const mat of [m.material].flat()) if (mat?.emissive) mat.emissive.setHex(on ? 0x5a4410 : 0x000000);   // dressed figures have several
     });

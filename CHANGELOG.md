@@ -1,5 +1,11 @@
 # Changelog
 
+## 2026-11-18 — Storyboard v0.26.0 (choose several, folding Shot Generator panel)
+- **Choose several:** in the Shot Generator panel, switch on *Several* and tap figures and pieces to add them to the choice (tap again to take one out); Shift-click does the same on the Mac. *All figures* chooses every figure in the scene; *None* or Esc lets go.
+- With several chosen, the panel changes them all at once: *Looks at* (the lens, a figure, or where the pose looks), *Pose*, *Drop to floor* and *Delete*. Dragging one of them in the top view moves the whole group. Cmd-D copies them all.
+- The Shot Generator panel folds into sections (Cameras, Shot size, Figures and pieces, Camera, Shading and light, How it works), like the board editor's. Folded sections are remembered on the device.
+- Scrolling over a slider or value in the Shot Generator panel no longer changes it; it only scrolls the panel. Scrolling over the 3D view still zooms.
+
 ## 2026-11-18 — Storyboard v0.25.0 (original bodies, undo in the Shot Generator)
 - Figures have the library's original shape again, with thighs together and feet as close as modelled. Only a small patch at the front of the crotch is smoothed, so there is no bulge.
 - The Shot Generator has Undo and Redo buttons in its top bar (Cmd-Z / Cmd-Shift-Z on the Mac). They step back through figures, furniture, the room, camera, light, colours and shading. One drag or one slider move is one step. Undo starts fresh when you switch to another board's camera.

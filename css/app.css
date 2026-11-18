@@ -530,16 +530,16 @@ fieldset.openings legend { color: var(--muted); font-size: 13px; padding: 0 4px;
 /* Editor panel: the slugline and shot name stay on top; every section below folds (v0.21.0). */
 #panel .panel-head { padding-bottom: 10px; margin-bottom: 10px; border-bottom: 1px solid var(--line); }
 #panel .panel-head .shot-name { color: var(--accent); white-space: nowrap; }
-#panel details.psec { padding-bottom: 12px; margin-bottom: 12px; border-bottom: 1px solid var(--line); }
-#panel details.psec:last-child { border-bottom: 0; }
-#panel details.psec { display: block; }
-#panel .psec-body { display: grid; gap: 8px; padding-top: 6px; }
+:is(#panel, #sg-panel) details.psec { padding-bottom: 12px; margin-bottom: 12px; border-bottom: 1px solid var(--line); }
+:is(#panel, #sg-panel) details.psec:last-child { border-bottom: 0; }
+:is(#panel, #sg-panel) details.psec { display: block; }
+:is(#panel, #sg-panel) .psec-body { display: grid; gap: 8px; padding-top: 6px; }
 #panel details.psec.buttons .psec-body { grid-template-columns: 1fr 1fr; gap: 6px; }
 #panel details.psec.buttons .psec-body button { min-width: 0; }
-#panel details.psec > summary { display: flex; width: 100%; list-style: none; cursor: pointer; display: flex; align-items: center; gap: 6px; min-height: 28px; -webkit-user-select: none; user-select: none; }
-#panel details.psec > summary::-webkit-details-marker { display: none; }
-#panel details.psec > summary::before { content: "▸"; color: var(--muted); font-size: 12px; width: 10px; transition: transform 0.15s; }
-#panel details.psec[open] > summary::before { transform: rotate(90deg); }
+:is(#panel, #sg-panel) details.psec > summary { display: flex; width: 100%; list-style: none; cursor: pointer; display: flex; align-items: center; gap: 6px; min-height: 28px; -webkit-user-select: none; user-select: none; }
+:is(#panel, #sg-panel) details.psec > summary::-webkit-details-marker { display: none; }
+:is(#panel, #sg-panel) details.psec > summary::before { content: "▸"; color: var(--muted); font-size: 12px; width: 10px; transition: transform 0.15s; }
+:is(#panel, #sg-panel) details.psec[open] > summary::before { transform: rotate(90deg); }
 #shot-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; max-height: 40vh; overflow-y: auto; }
 #shot-list button { width: 100%; display: grid; grid-template-columns: minmax(2.4em, auto) 1fr; gap: 6px; align-items: baseline; text-align: left; padding: 5px 6px; min-height: 0; font-size: 13px; background: transparent; border-color: transparent; }
 #shot-list button.on { background: var(--accent); color: var(--accent-text); }
@@ -560,3 +560,8 @@ fieldset.openings legend { color: var(--muted); font-size: 13px; padding: 0 4px;
 .sg-colours button[aria-label="Plain"] { border-color: #9a9ea6; }
 .sg-colours button.on { border-color: var(--accent); }
 #panel details.psec.buttons #shotgen-btn { grid-column: 1 / -1; }
+
+/* Shot Generator panel sections (v0.26.0): the panel no longer spaces its children, the sections do. */
+#sg-panel { gap: 0; }
+#sg-panel details.psec > summary { font-weight: 600; font-size: 13px; }
+.sg-choose .seg { grid-template-columns: 1fr 1fr 1fr; }
