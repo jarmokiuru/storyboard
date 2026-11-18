@@ -1,5 +1,10 @@
 # Changelog
 
+## 2026-11-18 — Storyboard v0.25.0 (original bodies, undo in the Shot Generator)
+- Figures have the library's original shape again, with thighs together and feet as close as modelled. Only a small patch at the front of the crotch is smoothed, so there is no bulge.
+- The Shot Generator has Undo and Redo buttons in its top bar (Cmd-Z / Cmd-Shift-Z on the Mac). They step back through figures, furniture, the room, camera, light, colours and shading. One drag or one slider move is one step. Undo starts fresh when you switch to another board's camera.
+- The board editor's Undo and Redo were already in its top bar: Cmd-Z / Cmd-Shift-Z, or a two-finger tap on the iPad.
+
 ## 2026-11-18 — Storyboard v0.24.0 (cast in colour, extras plain, no clothes)
 - Only the cast gets a colour: the characters the project lists with a body and height (in The Emperor, Stig and Jian). Everyone else is plain clay, including the press, speaking extras and figures without a name.
 - Any figure can still be given a colour by hand in its panel. For a named extra the colour applies to every figure of that name in the project; for a figure without a name it applies to that figure only. The first swatch, Plain, takes the colour off again.

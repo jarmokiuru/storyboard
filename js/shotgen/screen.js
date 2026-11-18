@@ -18,6 +18,7 @@ import { startPlacing, setBoard as placingBoard, addMenu, select, selectedItem, 
 import { uid, sceneOf, orderedBoards, BOARD_WIDTH, boardHeight, heading, readRoom, roomOpenings } from "../model.js";
 import { openingsEditor } from "./openings-editor.js";
 import { sceneBlocking, boardFigures, syncColours, pictureStale, setStamp } from "./blocking.js";
+import { makeUndo } from "./undo.js";
 
 const $ = (id) => document.getElementById(id);
 const SLIDERS = [
@@ -33,6 +34,8 @@ let loaded = "";   // the camera and light as they were when this board was open
 let light = { ...LIGHT };   // sun direction and height, sun strength, fill, outside brightness (stage.js LIGHT)
 let zoomRange = null;   // when the board's Lens/Focal is a zoom, e.g. [24, 70]
 let drag = null;
+let history = null;   // undo and redo (undo.js), for the board being looked through
+const pressed = new Set();   // pointers down anywhere: a change is taken in for undo once they are up
 const touches = new Map();
 
 // ---------- data ----------
@@ -95,6 +98,65 @@ export function openShotGenerator(p, b, h) {
   showCameras();
   stage.resize();
   hooks.changed();
+  history = makeUndo(undoState, putState);
+  showUndo();
+}
+
+// ---------- undo ----------
+
+// Everything the Shot Generator can change, as text.
+const undoState = () => JSON.stringify({
+  shot, light,
+  figures: sceneBlocking(project, scene).figures,
+  own: Object.fromEntries(sceneBoardsInOrder().map((b) => [b.id, b.ownFigures || null])),
+  objects: loc.objects || [], room: loc.room,
+  characters: project.characters || [], shading: project.shading || "clay",
+});
+
+function putState(text) {
+  const s = JSON.parse(text);
+  shot = s.shot;
+  light = s.light;
+  scene.blocking = { figures: s.figures };
+  for (const b of sceneBoardsInOrder()) {
+    if (s.own[b.id]) b.ownFigures = s.own[b.id];
+    else delete b.ownFigures;
+  }
+  if (JSON.stringify(loc.room) !== JSON.stringify(s.room)) { loc.room = s.room; stage.setSet(loc.room); }
+  loc.objects = s.objects;
+  project.characters = s.characters;
+  project.shading = s.shading;
+  figures = boardFigures(project, scene, board);
+  const keep = new Set([...loc.objects, ...figures].map((i) => i.id));
+  for (const id of [...stage.things.nodes.keys()]) if (!keep.has(id)) stage.things.remove(id);
+  for (const o of loc.objects) stage.things.put(o);
+  placingBoard(board, figures);
+  if (!selectedItem()) select(null);
+  refreshSelected();
+  showShading();
+  showLight();
+  apply();
+  showCameras();
+  hooks.changed();
+}
+
+function showUndo() {
+  const can = history?.can() || {};
+  $("sg-undo").disabled = !can.undo;
+  $("sg-redo").disabled = !can.redo;
+}
+
+function undoRedo(back) {
+  if (!history) return;
+  if (!(back ? history.undo() : history.redo())) toast(back ? "Nothing to undo." : "Nothing to redo.");
+  showUndo();
+}
+
+// Take in a change once nothing is held down, so one drag, one slider move or one held key is one step.
+function watchUndo() {
+  if (!history || $("shotgen").hidden || pressed.size || held.size) return;
+  history.check();
+  showUndo();
 }
 
 const showTitle = () => ($("sg-title").textContent = `${loc.name} · Board ${hooks.label(board)}`);
@@ -162,6 +224,8 @@ function switchTo(b) {
   markListedSize();
   apply();
   showCameras();
+  history?.reset();   // undo works within the board being looked through
+  showUndo();
 }
 
 // Make every out-of-date picture in the scene again, each through its own board's camera and light.
@@ -563,6 +627,11 @@ async function setDialog() {
 
 function bind() {
   $("sg-back").onclick = close;
+  $("sg-undo").onclick = () => undoRedo(true);
+  $("sg-redo").onclick = () => undoRedo(false);
+  document.addEventListener("pointerdown", (e) => pressed.add(e.pointerId), true);
+  for (const t of ["pointerup", "pointercancel"]) document.addEventListener(t, (e) => { pressed.delete(e.pointerId); setTimeout(watchUndo, 0); }, true);
+  setInterval(watchUndo, 400);   // also catches changes that finish later (a model loading, a dialog)
   $("sg-save").onclick = save;
   $("sg-save-new").onclick = saveAsNew;
   $("sg-set").onclick = (e) => setMenu(e.currentTarget);
@@ -666,7 +735,7 @@ function bind() {
   window.addEventListener("resize", () => { if (!$("shotgen").hidden) stage.resize(); });
   document.addEventListener("keydown", keys);
   document.addEventListener("keyup", keyUp);
-  window.addEventListener("blur", () => held.clear());
+  window.addEventListener("blur", () => { held.clear(); pressed.clear(); });
 }
 
 const inside = (p, r) => p.x >= r.x && p.x <= r.x + r.w && p.y >= r.y && p.y <= r.y + r.h;
@@ -866,6 +935,11 @@ function keys(e) {
   const key = e.key.toLowerCase();
   // Cmd keys work even from a number box in the panel (e.g. right after typing an elevation); the box is
   // left first, so it can't write its old value back over the change.
+  if ((e.metaKey || e.ctrlKey) && (key === "z" || key === "y") && !typing(e.target)) {
+    e.preventDefault();
+    e.stopPropagation();
+    return undoRedo(key === "z" && !e.shiftKey);
+  }
   if (e.metaKey || e.ctrlKey) {
     const cmd = { d: duplicateSelected, b: dropSelected, k: cycleShading }[key];
     if (!cmd || e.shiftKey || e.altKey || e.target.matches?.("textarea")) return;
@@ -907,6 +981,7 @@ function keys(e) {
 function keyUp(e) {
   held.delete(e.key.toLowerCase());
   fast = e.shiftKey;
+  setTimeout(watchUndo, 0);
 }
 
 function tick(now) {
