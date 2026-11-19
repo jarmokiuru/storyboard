@@ -17,7 +17,7 @@ import { SIZES, frameSize, sizeFromKuvakoko } from "./framing.js";
 import { startPlacing, setBoard as placingBoard, addMenu, select, selectedItem, chosenItems, isChosen, lead, chooseAllFigures, setSeveral, severalOn, moveSelected, deleteSelected, duplicateSelected, dropSelected, subjectDistance, refreshSelected } from "./placing.js";
 import { uid, sceneOf, orderedBoards, BOARD_WIDTH, boardHeight, heading, readRoom, roomOpenings } from "../model.js";
 import { openingsEditor } from "./openings-editor.js";
-import { sceneBlocking, boardFigures, syncColours, pictureStale, setStamp } from "./blocking.js";
+import { sceneBlocking, boardFigures, syncColours, pictureStale, setStamp, boardLight } from "./blocking.js";
 import { makeUndo } from "./undo.js";
 import { foldable } from "../fold.js";
 
@@ -90,7 +90,9 @@ export function openShotGenerator(p, b, h) {
   stage.setSet(loc.room);
   showPlan();
   figures = boardFigures(project, scene, board);
-  light = lightFor(project, board);
+  // One light per scene (v0.27.0): made the first time from this board's light (or the one it carried over).
+  if (!scene.light) scene.light = lightFor(project, board);
+  light = boardLight(scene, board);
   loaded = camLightText();
   showLight();
   showShading();
@@ -107,7 +109,8 @@ export function openShotGenerator(p, b, h) {
 
 // Everything the Shot Generator can change, as text.
 const undoState = () => JSON.stringify({
-  shot, light,
+  shot, sceneLight: scene.light,
+  ownLight: Object.fromEntries(sceneBoardsInOrder().map((b) => [b.id, b.ownLight || null])),
   figures: sceneBlocking(project, scene).figures,
   own: Object.fromEntries(sceneBoardsInOrder().map((b) => [b.id, b.ownFigures || null])),
   objects: loc.objects || [], room: loc.room,
@@ -117,12 +120,15 @@ const undoState = () => JSON.stringify({
 function putState(text) {
   const s = JSON.parse(text);
   shot = s.shot;
-  light = s.light;
+  scene.light = s.sceneLight;
   scene.blocking = { figures: s.figures };
   for (const b of sceneBoardsInOrder()) {
     if (s.own[b.id]) b.ownFigures = s.own[b.id];
     else delete b.ownFigures;
+    if (s.ownLight[b.id]) b.ownLight = s.ownLight[b.id];
+    else delete b.ownLight;
   }
+  light = boardLight(scene, board);
   if (JSON.stringify(loc.room) !== JSON.stringify(s.room)) { loc.room = s.room; stage.setSet(loc.room); }
   loc.objects = s.objects;
   project.characters = s.characters;
@@ -209,14 +215,14 @@ function showCameras() {
 }
 
 // Step to another board of the scene: this camera stays with this board, the figures stay where they are (the
-// board's own versions swap in), the light follows the board.
+// board's own versions swap in), and so does the light (the scene's, or the board's own).
 function switchTo(b) {
   if (!b || b === board) return;
   keepCamera();
   const from = { ...shot };
   board = b;
   cameraFor(board, from);
-  light = lightFor(project, board);
+  light = boardLight(scene, board);
   figures = boardFigures(project, scene, board);
   loaded = camLightText();
   placingBoard(board, figures);
@@ -280,7 +286,8 @@ const shot3d = () => {
 
 const readLight = (b) => (b.shot3d?.sun != null ? { ...LIGHT, ...(b.shot3d.light || {}), dir: b.shot3d.sun } : null);
 
-// The board's own light, else the nearest earlier board's in the same scene (light carries through a scene).
+// Before v0.27.0 each board had its own light, carried from the board before. This reads that, once, to start the
+// scene's shared light: the board's own, else the nearest earlier board's in the same scene.
 function lightFor(p, b) {
   if (readLight(b)) return readLight(b);
   const scene = orderedBoards(p).filter((x) => x.sceneId === b.sceneId);
@@ -318,12 +325,17 @@ function buildLight() {
     row.innerHTML = `<span>${label}</span><input type="range" min="${min}" max="${max}" step="${step}" data-light="${key}" aria-label="${title}"><output data-light-out="${key}"></output><button class="sg-zero" data-light-reset="${key}" title="Back to ${lightText(key, LIGHT[key])}">↺</button>`;
     box.append(row);
   }
-  box.querySelector(".sg-check")?.remove();
+  box.querySelectorAll(".sg-check").forEach((x) => x.remove());
   const walls = document.createElement("label");
   walls.className = "sg-check";
   walls.title = "Walls and ceiling cast shadows: the sun gets in only through the window and door";
   walls.innerHTML = `<input type="checkbox" data-light-walls> Walls block the sun`;
   box.append(walls);
+  const own = document.createElement("label");
+  own.className = "sg-check";
+  own.title = "On: this board keeps its own light; the other boards don't follow. Off: the light is shared by every board of the scene.";
+  own.innerHTML = `<input type="checkbox" data-light-own> This board only`;
+  box.append(own);
 }
 
 function showLight() {
@@ -333,6 +345,7 @@ function showLight() {
     $("sg-light").querySelector(`[data-light-out="${key}"]`).textContent = lightText(key, light[key]);
   }
   $("sg-light").querySelector("[data-light-walls]").checked = !!light.walls;
+  $("sg-light").querySelector("[data-light-own]").checked = !!board.ownLight;
 }
 
 async function save() {
@@ -687,6 +700,15 @@ function bind() {
       if (light.walls && loc.room.exterior) toast("An exterior has no walls; this takes effect in rooms.");
       showLight();
     }
+    // This board only: on = the board takes a copy of the light as it is now; off = back to the scene's light.
+    if (e.target.matches("[data-light-own]")) {
+      if (e.target.checked) board.ownLight = structuredClone(light);
+      else delete board.ownLight;
+      light = boardLight(scene, board);
+      showLight();
+      hooks.changed();
+    }
+    showCameras();   // other boards' pictures may now be out of date
   });
   $("sg-light").addEventListener("input", (e) => {
     const key = e.target.dataset?.light;
@@ -694,7 +716,7 @@ function bind() {
   });
   $("sg-light").addEventListener("click", (e) => {
     const key = e.target.dataset?.lightReset;
-    if (key) setLightValue(key, LIGHT[key]);
+    if (key) { setLightValue(key, LIGHT[key]); showCameras(); }
   });
   // No scroll-to-change on the panel: scrolling only scrolls it (Jarmo, 2026-11-18).
   $("sg-sizes").onclick = (e) => {

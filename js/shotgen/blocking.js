@@ -6,6 +6,8 @@
 //   board.ownFigures = { figureId: figure }          this board's own versions
 //   board.shot3d.figures                             what the board's saved picture showed (kept, never read back)
 //
+// The light is shared the same way (v0.27.0): scene.light, with board.ownLight for a board set to "This board only".
+//
 // Characters keep one colour everywhere: project.characters[].colour, matched by figure name.
 
 import { FIGURE_COLOURS } from "./catalog.js";
@@ -113,8 +115,15 @@ export function syncColours(project) {
 
 // ---------- is the saved picture out of date? ----------
 
-const round = (v) => (typeof v === "number" ? Math.round(v * 100) / 100 : v);
-const tidy = (o) => JSON.stringify(o, (k, v) => round(v));
+// Numbers rounded and keys sorted, so the same values always give the same text.
+const tidy = (o) => JSON.stringify(o, (k, v) => {
+  if (typeof v === "number") return Math.round(v * 100) / 100;
+  if (v && typeof v === "object" && !Array.isArray(v)) return Object.fromEntries(Object.keys(v).sort().map((x) => [x, v[x]]));
+  return v;
+});
+
+// The light a board uses: its own (This board only), else the scene's. Null before the scene has a shared light.
+export const boardLight = (scene, board) => board.ownLight || scene.light || null;
 
 // What a picture depends on besides the camera: the room, its furniture and the shading look.
 export const setStamp = (project, loc) => tidy({ room: loc.room, objects: loc.objects || [], shading: project.shading || "clay" });
@@ -125,6 +134,10 @@ export function pictureStale(project, scene, board, loc) {
   if (!s?.figures || !board.layers?.reference?.hasData) return false;
   if (s.setStamp && s.setStamp !== setStamp(project, loc)) return true;
   if (s.savedCamera && tidy(s.savedCamera) !== tidy(s.camera)) return true;
-  if (s.savedLight && tidy(s.savedLight) !== tidy({ sun: s.sun, light: s.light })) return true;
+  if (s.savedLight) {
+    const l = boardLight(scene, board);
+    const now = l ? (({ dir, ...rest }) => ({ sun: dir, light: rest }))(l) : { sun: s.sun, light: s.light };
+    if (tidy(s.savedLight) !== tidy(now)) return true;
+  }
   return tidy(s.figures) !== tidy(boardFigures(project, scene, board));
 }

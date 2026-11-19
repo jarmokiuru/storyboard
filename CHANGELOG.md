@@ -1,5 +1,11 @@
 # Changelog
 
+## 2026-11-19 — Storyboard v0.27.0 (one light per scene)
+- The Shot Generator's light (sun direction and height, strength, fill, diffusion, outside, walls) is now shared by every board of the scene: change it on one board and the others follow. Their saved pictures are marked out of date, and *Update pictures* makes them again.
+- *This board only* under the light keeps a board's own light, for a board that needs to differ. Turning it off puts the board back on the scene's light.
+- The first time a scene is opened, its light is taken from the board you open it on.
+- Shading (Clay / Outline) was already one setting for the whole project.
+
 ## 2026-11-18 — Storyboard v0.26.0 (choose several, folding Shot Generator panel)
 - **Choose several:** in the Shot Generator panel, switch on *Several* and tap figures and pieces to add them to the choice (tap again to take one out); Shift-click does the same on the Mac. *All figures* chooses every figure in the scene; *None* or Esc lets go.
 - With several chosen, the panel changes them all at once: *Looks at* (the lens, a figure, or where the pose looks), *Pose*, *Drop to floor* and *Delete*. Dragging one of them in the top view moves the whole group. Cmd-D copies them all.
