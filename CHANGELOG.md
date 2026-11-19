@@ -1,5 +1,11 @@
 # Changelog
 
+## 2026-11-19 — Storyboard v0.28.0 (camera plan of a scene)
+- New: a camera plan of the scene as a PNG. It shows the set from above with walls, doors, windows, furniture and figures (in their colours, with names and a nose for where they face), plus every board's camera: where it stands, which way it looks, and its angle of view for the lens, camera format and aspect ratio.
+- Each camera has a label with the shot number and lens (e.g. "2a 50mm"). Cameras in the same spot share one label. The angle-of-view lines reach just past the nearest figure in frame.
+- Heading, set name, room size and its measured / traced / assumed tag at the top; a 1 m scale bar, north, the camera format and any boards without a camera at the bottom.
+- In the board editor: Export → *Camera plan of this scene (PNG)…* (the scene of the board you're on). In the Shot Generator: Set… → *Camera plan of this scene (PNG)*.
+
 ## 2026-11-19 — Storyboard v0.27.0 (one light per scene)
 - The Shot Generator's light (sun direction and height, strength, fill, diffusion, outside, walls) is now shared by every board of the scene: change it on one board and the others follow. Their saved pictures are marked out of date, and *Update pictures* makes them again.
 - *This board only* under the light keeps a board's own light, for a board that needs to differ. Turning it off puts the board back on the scene's light.

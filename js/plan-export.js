@@ -30,6 +30,16 @@ export async function blankPlan(room, { ppm, maxSide } = SHOT_DESIGNER) {
   const g = c.getContext("2d");
   g.fillStyle = "#fff";
   g.fillRect(0, 0, W, H);
+  drawWalls(g, room, ppm);
+  const blob = await new Promise((resolve) => c.toBlob(resolve, "image/png"));
+  return { blob: await withDensity(blob, ppm), width: W, height: H, ppm };
+}
+
+// The walls, windows and doors, in black, with the room's inside faces at 0…w·ppm and 0…d·ppm. Also used by the
+// scene's camera plan (scene-plan.js), which moves the origin first.
+export function drawWalls(g, room, ppm) {
+  const W = Math.round(room.w * ppm);
+  const H = Math.round(room.d * ppm);
   g.fillStyle = g.strokeStyle = "#000";
   g.lineWidth = Math.max(2, LINE * ppm);
   const t = WALL * ppm;
@@ -51,8 +61,6 @@ export async function blankPlan(room, { ppm, maxSide } = SHOT_DESIGNER) {
     }
     band(g, side, at, along, t, W, H);
   }
-  const blob = await new Promise((resolve) => c.toBlob(resolve, "image/png"));
-  return { blob: await withDensity(blob, ppm), width: W, height: H, ppm };
 }
 
 function span(o, along, ppm) {

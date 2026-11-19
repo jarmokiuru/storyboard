@@ -757,6 +757,7 @@ function exportMenu(anchor) {
     { label: "All boards as PNGs (.zip)…", action: exportAllPngs },
     { label: "Shot data sheet (.xlsx)…", action: () => exportShotSheet("xlsx") },
     { label: "Shot data sheet (.csv)…", action: () => exportShotSheet("csv") },
+    { label: "Camera plan of this scene (PNG)…", action: exportCameraPlan },
     { type: "sep" },
     { type: "note", label: exportNoteText() },
     { type: "note", label: "Storyboard v" + VERSION },
@@ -776,6 +777,19 @@ async function exportProjectFile() {
   project.firstEditSinceExport = null;
   await db.putProject(project);
   exportNote();
+}
+
+// The scene's set from above with every board's camera and shot number (scene-plan.js).
+async function exportCameraPlan() {
+  await flush();
+  const scene = sceneOf(project, board);
+  const { sceneLocation, scenePlan } = await import("./scene-plan.js");
+  const loc = scene && sceneLocation(project, scene);
+  if (!loc) return toast("This scene has no set yet. Open it in the Shot Generator and place a camera first.", 5000);
+  const out = await scenePlan(project, scene, loc);
+  if (!out.cameras) return toast("No board in this scene has a camera yet. Set one up in the Shot Generator.", 5000);
+  if (out.unset.length) toast(`Boards without a camera are listed at the bottom: ${out.unset.join(", ")}.`, 4500);
+  await shareFile(out.blob, `${safeName(heading(scene))} camera plan.png`, "image/png");
 }
 
 // ---------- Shot Generator ----------

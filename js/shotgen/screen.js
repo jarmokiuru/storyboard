@@ -9,6 +9,7 @@ import { SENSORS, PRIMES, DEFAULT_SENSOR, sensorById } from "./sensors.js";
 import { formDialog, toast, openMenu, choose, confirmBox, pickFile, shareFile } from "../ui.js";
 import * as db from "../db.js";
 import { blankPlan, SHOT_DESIGNER, SHARP } from "../plan-export.js";
+import { scenePlan } from "../scene-plan.js";
 import { loadPlanPicture, calibratePlan } from "../plan-calibrate.js";
 import { locationFile, readLocationFile } from "../location-file.js";
 import { parseLens } from "../lens.js";
@@ -505,6 +506,7 @@ function setMenu(anchor) {
     { type: "sep" },
     { label: "Plan for Shot Designer (PNG)", action: () => exportPlan(SHOT_DESIGNER) },
     { label: "Plan for Shot Designer, sharp (800 px/m)", action: () => exportPlan(SHARP) },
+    { label: "Camera plan of this scene (PNG)", action: exportCameraPlan },
     { label: "Save location file", action: saveLocation },
     { label: "Open location file…", action: openLocation },
   ]);
@@ -562,6 +564,14 @@ async function exportPlan(kind) {
   const note = out.ppm < kind.ppm ? ` The room is large, so it's ${out.ppm} px per metre instead of ${kind.ppm}.` : "";
   toast(`Picture width = ${metres(r.w)} m (west–east), height = ${metres(r.d)} m (north–south).${scale}${note}`, 7000);
   await shareFile(out.blob, name, "image/png");
+}
+
+// Every board's camera with its shot number and lens, on the set seen from above (scene-plan.js).
+async function exportCameraPlan() {
+  keepCamera();   // the camera being looked through counts too
+  const out = await scenePlan(project, scene, loc);
+  if (!out.cameras) return toast("No board in this scene has a camera yet.");
+  await shareFile(out.blob, `${fileName(heading(scene))} camera plan.png`, "image/png");
 }
 
 async function saveLocation() {

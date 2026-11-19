@@ -2,7 +2,7 @@
 // With every release: change VERSION here and in js/version.js, and list any new file below
 // (the list can be rebuilt from the folders: js/, vendor/three/, vendor/models/).
 
-const VERSION = "0.27.0";
+const VERSION = "0.28.0";
 const CACHE = "storyboard-" + VERSION;
 const FILES = [
   "./",
@@ -33,6 +33,7 @@ const FILES = [
   "js/renumber.js",
   "js/plan-calibrate.js",
   "js/plan-export.js",
+  "js/scene-plan.js",
   "js/projectfile.js",
   "js/projects-screen.js",
   "js/script.js",
