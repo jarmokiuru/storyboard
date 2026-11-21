@@ -783,12 +783,13 @@ async function exportProjectFile() {
 async function exportCameraPlan() {
   await flush();
   const scene = sceneOf(project, board);
-  const { sceneLocation, scenePlan } = await import("./scene-plan.js");
+  const { sceneLocation } = await import("./scene-plan.js");
+  const { chooseCameraPlan } = await import("./camera-plan-dialog.js");
   const loc = scene && sceneLocation(project, scene);
   if (!loc) return toast("This scene has no set yet. Open it in the Shot Generator and place a camera first.", 5000);
-  const out = await scenePlan(project, scene, loc);
-  if (!out.cameras) return toast("No board in this scene has a camera yet. Set one up in the Shot Generator.", 5000);
-  if (out.unset.length) toast(`Boards without a camera are listed at the bottom: ${out.unset.join(", ")}.`, 4500);
+  const out = await chooseCameraPlan(project, scene, loc);   // preview + what to show; null = cancelled
+  if (!out) return;
+  await db.putProject(project);   // keeps the choice of what to show
   await shareFile(out.blob, `${safeName(heading(scene))} camera plan.png`, "image/png");
 }
 

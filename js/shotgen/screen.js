@@ -9,7 +9,7 @@ import { SENSORS, PRIMES, DEFAULT_SENSOR, sensorById } from "./sensors.js";
 import { formDialog, toast, openMenu, choose, confirmBox, pickFile, shareFile } from "../ui.js";
 import * as db from "../db.js";
 import { blankPlan, SHOT_DESIGNER, SHARP } from "../plan-export.js";
-import { scenePlan } from "../scene-plan.js";
+import { chooseCameraPlan } from "../camera-plan-dialog.js";
 import { loadPlanPicture, calibratePlan } from "../plan-calibrate.js";
 import { locationFile, readLocationFile } from "../location-file.js";
 import { parseLens } from "../lens.js";
@@ -569,8 +569,9 @@ async function exportPlan(kind) {
 // Every board's camera with its shot number and lens, on the set seen from above (scene-plan.js).
 async function exportCameraPlan() {
   keepCamera();   // the camera being looked through counts too
-  const out = await scenePlan(project, scene, loc);
-  if (!out.cameras) return toast("No board in this scene has a camera yet.");
+  const out = await chooseCameraPlan(project, scene, loc);   // preview + what to show; null = cancelled
+  if (!out) return;
+  hooks.changed();   // keeps the choice of what to show
   await shareFile(out.blob, `${fileName(heading(scene))} camera plan.png`, "image/png");
 }
 

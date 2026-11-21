@@ -1,5 +1,9 @@
 # Changelog
 
+## 2026-11-21 — Storyboard v0.29.0 (camera plan: choose what shows, nothing cut off)
+- Camera labels, camera bodies, angle-of-view lines and names that would fall outside the picture now widen the white margin just enough to stay whole.
+- Exporting a camera plan first opens a preview with tick boxes: angle of view, lens on the labels, cast, cast names, extras, extras' names (off by default), furniture, scene heading and set, scale/north/camera format, boards without a camera. The preview redraws as you tick, and the choice is remembered for the project.
+
 ## 2026-11-19 — Storyboard v0.28.0 (camera plan of a scene)
 - New: a camera plan of the scene as a PNG. It shows the set from above with walls, doors, windows, furniture and figures (in their colours, with names and a nose for where they face), plus every board's camera: where it stands, which way it looks, and its angle of view for the lens, camera format and aspect ratio.
 - Each camera has a label with the shot number and lens (e.g. "2a 50mm"). Cameras in the same spot share one label. The angle-of-view lines reach just past the nearest figure in frame.

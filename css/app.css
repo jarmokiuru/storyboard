@@ -565,3 +565,11 @@ fieldset.openings legend { color: var(--muted); font-size: 13px; padding: 0 4px;
 #sg-panel { gap: 0; }
 #sg-panel details.psec > summary { font-weight: 600; font-size: 13px; }
 .sg-choose .seg { grid-template-columns: 1fr 1fr 1fr; }
+
+/* Camera plan export: preview beside the tick boxes (camera-plan-dialog.js) */
+dialog:has(.plan-choose) { width: min(1000px, calc(100vw - 32px)); }
+.plan-choose { display: grid; grid-template-columns: minmax(0, 1fr) 220px; gap: 16px; align-items: start; }
+.plan-preview { background: #fff; border-radius: 6px; display: flex; justify-content: center; align-items: center; min-height: 200px; }
+.plan-preview-pic { display: block; max-width: 100%; max-height: min(62dvh, 620px); width: auto; height: auto; }
+.plan-checks { display: grid; gap: 10px; }
+@media (max-width: 700px) { .plan-choose { grid-template-columns: 1fr; } }

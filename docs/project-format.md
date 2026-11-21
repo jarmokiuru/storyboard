@@ -40,7 +40,7 @@ Entries may be stored or deflated. A file with only `project.json` is valid (a s
 | `locations` | object[] | 3D sets, one per location. |
 | `id` | string | Stable id; a starter file may leave it out (the app makes one). Keep it to let a later starter file *merge* into the same project. |
 | `created`, `modified`, `exported` | number | Milliseconds since 1970 (`exported` null = never). Set by the app. |
-| `editedSinceExport`, `firstEditSinceExport`, `importMaps`, `pdfOptions` | — | App bookkeeping; leave out of starter files. |
+| `editedSinceExport`, `firstEditSinceExport`, `importMaps`, `pdfOptions`, `planOptions` | — | App bookkeeping; leave out of starter files. |
 
 ### `characters[]`
 
