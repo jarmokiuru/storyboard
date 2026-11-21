@@ -1,7 +1,7 @@
 // Contact-sheet PDF: boards in a grid with their shot details underneath, and a blank worksheet. SPEC §7.
 
 import { PDF } from "./pdf.js";
-import { orderedBoards, heading, boardLabel, sceneOf, ratioLabel } from "./model.js";
+import { orderedBoards, heading, boardLabel, sceneOf, ratioLabel, shownScenes } from "./model.js";
 import * as store from "./board-store.js";
 import { formDialog, toast } from "./ui.js";
 
@@ -37,14 +37,14 @@ const LIGHT = [0.75, 0.75, 0.78];
 export async function askOptions(project, preset = {}) {
   const o = { ...DEFAULTS, ...project.pdfOptions, ...preset };
   if (project.pdfOptions && !project.pdfOptions.fields.includes("sisalto")) o.fields = [...o.fields, "sisalto"];
-  const sceneIds = project.scenes.map((s) => s.id);
+  const sceneIds = shownScenes(project).map((s) => s.id);   // the open episode's storyboarded scenes
   const v = await formDialog("Contact sheet PDF", [
     { name: "kind", label: "Print", type: "select", value: o.kind, options: [["boards", "Boards"], ["blank", "Blank worksheet (empty frames)"]] },
     { name: "perPage", label: "Boards per page", type: "select", value: o.perPage, options: [...["1", "2", "3", "4", "6", "8", "9", "12"].map((n) => [n, n]), ["custom", "Custom…"]] },
     { name: "custom", label: "Custom: rows × columns, e.g. 3x4", value: o.custom },
     { name: "paper", label: "Paper", type: "select", value: o.paper, options: ["A4", "Letter"] },
     { name: "orientation", label: "Orientation", type: "select", value: o.orientation, options: [["landscape", "Landscape"], ["portrait", "Portrait"]] },
-    { name: "scenes", label: "Scenes", type: "checklist", value: o.scenes ? o.scenes.filter((id) => sceneIds.includes(id)) : sceneIds, options: project.scenes.map((s) => [s.id, heading(s)]) },
+    { name: "scenes", label: "Scenes", type: "checklist", value: o.scenes ? o.scenes.filter((id) => sceneIds.includes(id)) : sceneIds, options: shownScenes(project).map((s) => [s.id, heading(s)]) },
     { name: "only", label: "Only these shots in the ticked scenes (empty = all), e.g. 3, 4b, 7-9 — or 12/3 for Kohtaus 12, Kuva 3", value: o.only || "" },
     { name: "fields", label: "Under each frame", type: "checklist", value: o.fields, options: FIELDS },
     { name: "newScenePage", label: "Start each scene on a new page", type: "checkbox", value: o.newScenePage },

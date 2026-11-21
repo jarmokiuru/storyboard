@@ -4,7 +4,7 @@
 
 import { readFirstSheet } from "./xlsx.js";
 import { parseScript } from "./script.js";
-import { newScene, newBoard, sceneBoards, uid, readRoom, roomOpenings } from "./model.js";
+import { newScene, newBoard, sceneBoards, uid, readRoom, roomOpenings, openEpisode } from "./model.js";
 import { formDialog, toast } from "./ui.js";
 
 const COLUMNS = {
@@ -21,6 +21,11 @@ const REQUIRED = { breakdown: ["kohtaus"], shotlist: ["kohtaus", "kuva"] };
 
 const SCENE_FIELDS = { intExt: "INT/EXT", lokaatio: "Lokaatio", aika: "Vuorokaudenaika", synopsis: "Synopsis", henkilot: "Henkilöt", actBefore: "Act divider" };
 const SHOT_FIELDS = { kuvakoko: "Kuvakoko", sisalto: "Sisältö", lens: "Lens/Focal", movement: "Movement", notes: "Notes", dialogue: "Dialogue", action: "Action" };
+
+// Scenes are matched by Kohtaus # within one episode (EP3's scene 12 is not EP4's). ep = episode id, or null for a
+// project without episodes.
+const openEp = (project) => openEpisode(project)?.id ?? null;
+const findScene = (project, kohtaus, ep) => project.scenes.find((s) => (s.episodeId ?? null) === ep && sameNumber(s.kohtaus, kohtaus));
 
 const norm = (s) => String(s ?? "").toLowerCase().replace(/\s+/g, "");
 const sameNumber = (a, b) => norm(a) === norm(b);
@@ -133,7 +138,7 @@ function readShotList(rows, start, cell) {
 // ---------- merge plans ----------
 
 function emptyPlan() {
-  return { newScenes: [], newBoards: [], reuse: [], fills: [], changes: [], problems: [] };
+  return { newScenes: [], newBoards: [], reuse: [], fills: [], changes: [], problems: [], switchOn: new Set() };
 }
 
 function compare(plan, target, fields, incoming, label) {
@@ -147,13 +152,15 @@ function compare(plan, target, fields, incoming, label) {
   }
 }
 
+// Each incoming scene may carry episodeId; without one it goes to the open episode.
 function planScenes(project, scenes, problems = []) {
   const plan = emptyPlan();
   plan.problems.push(...problems);
   for (const inc of scenes) {
-    const existing = project.scenes.find((s) => sameNumber(s.kohtaus, inc.kohtaus));
+    const ep = inc.episodeId !== undefined ? inc.episodeId : openEp(project);
+    const existing = findScene(project, inc.kohtaus, ep);
     if (existing) compare(plan, existing, SCENE_FIELDS, inc, `Kohtaus ${inc.kohtaus}`);
-    else plan.newScenes.push(inc);
+    else plan.newScenes.push({ ...inc, episodeId: ep });
   }
   return plan;
 }
@@ -166,7 +173,7 @@ function planShots(project, shots, problems = []) {
   const seen = new Set();
   const reused = new Set();
   for (const shot of shots) {
-    const scene = project.scenes.find((s) => sameNumber(s.kohtaus, shot.kohtaus));
+    const scene = findScene(project, shot.kohtaus, shot.episodeId !== undefined ? shot.episodeId : openEp(project));
     if (!scene) {
       plan.problems.push(`Kuva ${shot.kuva}: Kohtaus ${shot.kohtaus} isn't in this project (import the breakdown first); skipped.`);
       continue;
@@ -191,17 +198,28 @@ function planShots(project, shots, problems = []) {
     } else {
       plan.newBoards.push({ scene, shot });
     }
+    // A scene that came in from the script or breakdown, still off and never switched by hand, goes on with its shots.
+    if (scene.storyboard === false && scene.storyboardAuto) plan.switchOn.add(scene);
   }
   return plan;
 }
 
 // ---------- applying ----------
 
+// New scenes join the scene index switched off (Jarmo, 2026-11-21: "scenes with shots" start on — the shot list
+// switches them on when it brings their shots). A starter file may say storyboard: true/false itself.
 function insertScene(project, fields) {
-  const scene = newScene(fields);
-  const after = project.scenes.findIndex((s) => numeric(s.kohtaus) > numeric(fields.kohtaus));
-  if (after < 0) project.scenes.push(scene);
-  else project.scenes.splice(after, 0, scene);
+  const { storyboard, ...rest } = fields;
+  const ep = rest.episodeId ?? null;
+  const scene = newScene(rest);
+  if (ep) scene.episodeId = ep; else delete scene.episodeId;
+  if (typeof storyboard === "boolean") { if (!storyboard) scene.storyboard = false; }
+  else Object.assign(scene, { storyboard: false, storyboardAuto: true });
+  const same = project.scenes.filter((s) => (s.episodeId ?? null) === ep);
+  const later = same.find((s) => numeric(s.kohtaus) > numeric(fields.kohtaus));
+  if (later) project.scenes.splice(project.scenes.indexOf(later), 0, scene);
+  else if (same.length) project.scenes.splice(project.scenes.indexOf(same[same.length - 1]) + 1, 0, scene);
+  else project.scenes.push(scene);
   project.boards.push(newBoard(scene.id, 1, true));
 }
 
@@ -229,13 +247,15 @@ function apply(project, plan, accepted) {
   for (const s of plan.newScenes) insertScene(project, s);
   for (const { board, shot } of plan.reuse) Object.assign(board, { kuva: shot.kuva }, pick(shot, Object.keys(SHOT_FIELDS)));
   for (const { scene, shot } of plan.newBoards) insertBoard(project, scene, shot);
+  for (const scene of plan.switchOn) { delete scene.storyboard; delete scene.storyboardAuto; }
 }
 
 async function review(project, plan, what) {
   const adds = [];
-  if (plan.newScenes.length) adds.push(`${plan.newScenes.length} new ${plan.newScenes.length === 1 ? "scene" : "scenes"}`);
+  if (plan.newScenes.length) adds.push(`${plan.newScenes.length} new ${plan.newScenes.length === 1 ? "scene" : "scenes"} to the scene index (switched off until their shots arrive, or until you switch them on in Scenes)`);
   const boards = plan.newBoards.length + plan.reuse.length;
   if (boards) adds.push(`${boards} new ${boards === 1 ? "board" : "boards"}`);
+  if (plan.switchOn.size) adds.push(`switches on ${plan.switchOn.size} ${plan.switchOn.size === 1 ? "scene" : "scenes"} that now ${plan.switchOn.size === 1 ? "has" : "have"} shots`);
   if (plan.fills.length) adds.push(`${plan.fills.length} empty ${plan.fills.length === 1 ? "field" : "fields"} filled`);
   if (!adds.length && !plan.changes.length) {
     toast(plan.problems.length ? plan.problems[0] : `Nothing new in this ${what}.`, 5000);
@@ -312,21 +332,43 @@ const sameRoom = (a, b) => {
 // this device are never touched. incoming: a normalised project (projectfile.js). Returns true when something changed.
 export async function mergeStarter(project, incoming) {
   const sceneOfIn = (b) => incoming.scenes.find((s) => s.id === b.sceneId);
-  const scenes = incoming.scenes.map((s) => pick(s, ["kohtaus", ...Object.keys(SCENE_FIELDS)]));
-  const shots = incoming.boards.map((b) => ({ kohtaus: sceneOfIn(b).kohtaus, kuva: b.kuva, ...pick(b, Object.keys(SHOT_FIELDS)) }));
+  // Episodes match by name. Episodes new to this project are added when the merge is accepted.
+  const newEpisodes = [];
+  const inEps = incoming.episodes || [];
+  if (inEps.length > 1 && !project.episodes?.length) {
+    toast("This file has several episodes and this project has none. Open it as a new project (Keep both) instead.", 7000);
+    return false;
+  }
+  const epFor = (s) => {
+    const name = inEps.find((e) => e.id === s.episodeId)?.name;
+    if (name == null || !project.episodes?.length) return undefined;   // the open episode
+    let e = project.episodes.find((x) => x.name === name) || newEpisodes.find((x) => x.name === name);
+    if (!e) newEpisodes.push((e = { id: uid(), name }));
+    return e.id;
+  };
+  // A scene new to this project starts on when the file says so, or when it brings shots (a board with any shot
+  // field filled); the empty board every scene gets on opening doesn't count.
+  const withShots = new Set(incoming.boards.filter((b) => Object.keys(SHOT_FIELDS).some((f) => b[f])).map((b) => b.sceneId));
+  const scenes = incoming.scenes.map((s) => ({
+    ...pick(s, ["kohtaus", ...Object.keys(SCENE_FIELDS)]), episodeId: epFor(s),
+    storyboard: typeof s.storyboard === "boolean" ? s.storyboard : withShots.has(s.id),
+  }));
+  const shots = incoming.boards.map((b) => ({ kohtaus: sceneOfIn(b).kohtaus, episodeId: epFor(sceneOfIn(b)), kuva: b.kuva, ...pick(b, Object.keys(SHOT_FIELDS)) }));
   // Only the first board of each shot is matched; continuation boards in the file are skipped quietly.
   const seen = new Set();
+  const epKey = (s) => (s.episodeId ?? "") + "|" + norm(s.kohtaus);
   const firstShots = shots.filter((s) => {
-    const key = norm(s.kohtaus) + "/" + norm(s.kuva);
+    const key = epKey(s) + "/" + norm(s.kuva);
     if (seen.has(key)) return false;
     seen.add(key);
     return true;
   });
 
   const scenePlan = planScenes(project, scenes);
-  const added = new Set(scenePlan.newScenes.map((s) => norm(s.kohtaus)));
-  const shotPlan = planShots(project, firstShots.filter((s) => !added.has(norm(s.kohtaus))));
-  const boardsInNewScenes = firstShots.filter((s) => added.has(norm(s.kohtaus))).length;
+  const added = new Set(scenePlan.newScenes.map((s) => (s.episodeId ?? openEp(project) ?? "") + "|" + norm(s.kohtaus)));
+  const inNew = (s) => added.has((s.episodeId !== undefined ? s.episodeId ?? "" : openEp(project) ?? "") + "|" + norm(s.kohtaus));
+  const shotPlan = planShots(project, firstShots.filter((s) => !inNew(s)));
+  const boardsInNewScenes = firstShots.filter(inNew).length;
 
   // Project-wide settings: filled when missing here, listed when different.
   const extra = { fills: [], changes: [], problems: [] };
@@ -375,6 +417,7 @@ export async function mergeStarter(project, incoming) {
   const fills = scenePlan.fills.length + shotPlan.fills.length + extra.fills.length;
   const boards = shotPlan.newBoards.length + shotPlan.reuse.length + boardsInNewScenes;
   const adds = [];
+  if (newEpisodes.length) adds.push(`${newEpisodes.length === 1 ? "episode" : "episodes"} ${newEpisodes.map((e) => e.name).join(", ")}`);
   if (scenePlan.newScenes.length) adds.push(`${scenePlan.newScenes.length} new ${scenePlan.newScenes.length === 1 ? "scene" : "scenes"}`);
   if (boards) adds.push(`${boards} new ${boards === 1 ? "board" : "boards"}`);
   if (fills) adds.push(`${fills} empty ${fills === 1 ? "item" : "items"} filled`);
@@ -391,6 +434,7 @@ export async function mergeStarter(project, incoming) {
   if (!v) return false;
   const accepted = new Set(v.accept || []);
 
+  if (newEpisodes.length) project.episodes.push(...newEpisodes);
   apply(project, scenePlan, scenePlan.changes.filter((c) => accepted.has("s" + c.id)).map((c) => c.id));
   // With the new scenes in place, plan every shot again; accepted changes are matched by their wording.
   const acceptedText = new Set(shotPlan.changes.filter((c) => accepted.has("b" + c.id)).map((c) => c.text));

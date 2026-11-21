@@ -1,5 +1,12 @@
 # Changelog
 
+## 2026-11-21 — Storyboard v0.30.0 (episodes and the scene index)
+- A project can hold several episodes (e.g. EP3 and EP4). Scenes → *Split into episodes…* starts it: the scenes so far become the first episode, and the new one starts with an empty scene. The episode button in the top bar (EP3 ▾) switches between them; strip, PDF, shot sheet, scene list and imports work on the open episode.
+- New *Scenes* button: the scene index, every scene of the episode in one scrolling list with its shots and synopsis, a search box, and a tick box per scene for storyboarding it. Tap a scene to go to it. Switched-off scenes stay in the index with their data but leave the strip, PDF, shot sheet and phone viewer. One scene always stays on.
+- Importing a breakdown or script brings every scene into the index switched off; importing the shot list switches on the scenes it brings shots for (unless you have switched them by hand). Scenes you already had stay as they are. Scene numbers are matched within the episode.
+- Exports carry the episode in their file names. The phone viewer shows every episode, with the episode before each heading.
+- Starter files can name episodes and carry a full scene index (see the project-format doc).
+
 ## 2026-11-21 — Storyboard v0.29.0 (camera plan: choose what shows, nothing cut off)
 - Camera labels, camera bodies, angle-of-view lines and names that would fall outside the picture now widen the white margin just enough to stay whole.
 - Exporting a camera plan first opens a preview with tick boxes: angle of view, lens on the labels, cast, cast names, extras, extras' names (off by default), furniture, scene heading and set, scale/north/camera format, boards without a camera. The preview redraws as you tick, and the choice is remembered for the project.

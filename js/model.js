@@ -116,7 +116,21 @@ export function heading(scene) {
 }
 
 export const sceneBoards = (p, sceneId) => p.boards.filter((b) => b.sceneId === sceneId);
-export const orderedBoards = (p) => p.scenes.flatMap((s) => sceneBoards(p, s.id));
+// ---------- episodes and the scene index (Jarmo, 2026-11-21) ----------
+// A project may hold several episodes (project.episodes = [{ id, name }], scene.episodeId). The editor works on one
+// at a time (project.openEpisode). Every scene of the script is in the scene index; only scenes switched on for
+// storyboarding (scene.storyboard !== false) show in the strip, the PDF, the shot sheet and the viewer.
+// scene.storyboardAuto: the scene came in from an import and nobody has switched it by hand yet, so the shot list
+// may switch it on when it brings the scene's first shots.
+export const openEpisode = (p) => (p.episodes?.length ? p.episodes.find((e) => e.id === p.openEpisode) || p.episodes[0] : null);
+export const episodeOf = (p, scene) => (p.episodes || []).find((e) => e.id === scene.episodeId) || null;
+export const episodeName = (p, scene) => episodeOf(p, scene)?.name || "";
+// All scenes of the open episode, on or off (the whole project when it has no episodes).
+export const episodeScenes = (p) => { const e = openEpisode(p); return e ? p.scenes.filter((s) => s.episodeId === e.id) : p.scenes; };
+export const isOn = (scene) => scene.storyboard !== false;
+// The scenes being storyboarded: the open episode's, or with all = true every episode's.
+export const shownScenes = (p, all = false) => (all ? p.scenes : episodeScenes(p)).filter(isOn);
+export const orderedBoards = (p, all = false) => shownScenes(p, all).flatMap((s) => sceneBoards(p, s.id));
 export const sceneOf = (p, board) => p.scenes.find((s) => s.id === board.sceneId);
 
 // A shot with one board shows as 3; a shot with several as 3a, 3b, 3c (Jarmo, 2026-11-18; before: 3, 3b, 3c).
@@ -194,6 +208,7 @@ export function moveBoardToScene(p, board, sceneId) {
 }
 
 export function addScene(p, scene) {
+  if (openEpisode(p)) scene.episodeId = openEpisode(p).id;
   p.scenes.push(scene);
   const b = newBoard(scene.id, 1, true);
   p.boards.push(b);
@@ -208,7 +223,7 @@ export function removeScene(p, scene) {
 }
 
 export function nextSceneNumber(p) {
-  const nums = p.scenes.map((s) => parseInt(s.kohtaus, 10)).filter((n) => !isNaN(n));
+  const nums = episodeScenes(p).map((s) => parseInt(s.kohtaus, 10)).filter((n) => !isNaN(n));
   return Math.max(0, ...nums) + 1;
 }
 

@@ -35,7 +35,9 @@ Entries may be stored or deflated. A file with only `project.json` is valid (a s
 | `shading` | string | Shot Generator look for the whole project: `"clay"` (default) or `"outline"` (black edge lines on figures and furniture). |
 | `lenses` | number[] | The lens set in mm, shown as the Shot Generator's lens buttons. Default `[14, 18, 25, 35, 50, 85, 100, 135, 150, 180]`. |
 | `characters` | object[] | `{ name, model, height }` — see below. Used by the Shot Generator's Add menu. |
-| `scenes` [required] | object[] | In story order. |
+| `episodes` | object[] | Optional (v0.30.0): `[{ id, name }]`, e.g. `[{ "id": "e3", "name": "EP3" }, { "id": "e4", "name": "EP4" }]`. A project without episodes leaves it out. |
+| `openEpisode` | string | Episode id the editor shows (app state). |
+| `scenes` [required] | object[] | In story order (within each episode). With episodes, every scene of every episode's script; scenes not being storyboarded have `storyboard: false`. |
 | `boards` [required] | object[] | Grouped by scene, in board order. |
 | `locations` | object[] | 3D sets, one per location. |
 | `id` | string | Stable id; a starter file may leave it out (the app makes one). Keep it to let a later starter file *merge* into the same project. |
@@ -64,6 +66,9 @@ Entries may be stored or deflated. A file with only `project.json` is valid (a s
 | `id` | Optional in starter files |
 | `locationId` | Links to `locations[].id`; optional (the app also matches by `lokaatio` name) |
 | `collapsed` | App state |
+| `episodeId` | Links to `episodes[].id` (only in projects with episodes). Kohtaus # is unique within an episode, not across episodes. Starter files may give `episode` (the name, e.g. `"EP3"`) instead. |
+| `storyboard` | `false` = in the scene index but not storyboarded: no strip, PDF, shot sheet, viewer or 3D. Missing or `true` = storyboarded. |
+| `storyboardAuto` | App state: the scene came in from an import switched off and nobody has switched it by hand; a shot-list import switches it on when it brings the scene's first shots. |
 | `blocking` | `{ figures: [figure…] }` — the scene's figures, shared by every board of the scene (v0.22.0; figure fields as `shot3d.figures` below). Made by the app the first time the scene is opened in the Shot Generator, from the last board with figures. Optional in starter files. |
 | `light` | The scene's light, shared by every board of the scene (v0.27.0): `{ dir (° the sun comes from), height, sun, fill, diffusion, outside, walls }`, values as `shot3d.light` below. Made by the app the first time the scene is opened in the Shot Generator, from that board's light. Optional in starter files. |
 
@@ -142,11 +147,25 @@ A starter file is a `.storyboard` zip holding only `project.json`. Minimal examp
 }
 ```
 
+### Episodes in a starter file (v0.30.0)
+
+Give each scene and each board an `episode` name instead of ids; the app makes `episodes` from them:
+
+```json
+"scenes": [{ "episode": "EP3", "kohtaus": "12", "lokaatio": "Press room" }, { "episode": "EP3", "kohtaus": "13", "storyboard": false }],
+"boards": [{ "episode": "EP3", "kohtaus": "12", "kuva": "1", "kuvakoko": "WS" }]
+```
+
+A full scene index from the script can go in as scenes with `"storyboard": false` for the scenes without shots: opened as a new project, every scene without `storyboard: false` is storyboarded. Merged into a project already on the device, scenes are matched by episode name + `kohtaus`; a new scene without a `storyboard` value starts on only when the file brings shots for it (a board with any shot field filled). A file with several episodes can't be merged into a project without episodes (open it as a new project).
+
 ### Opening a starter file
 
 - **New project on this device:** opened as it is; boards start blank.
 - **Same project already on the device** (same `id`): the app offers **Merge**, **Keep both** or **Replace**. Merge follows the shot-list re-import rules: scenes matched by `kohtaus`, boards by `kohtaus` + `kuva`; new ones added; empty fields filled; changed text listed for Jarmo to accept or keep; camera format, lens set, characters and location rooms listed the same way. Drawings, 3D cameras, figures and furniture already on the device are never touched, and drawings inside the file are not brought in by a merge.
 
 ## Board picture names
+
+With episodes, exports (PDF, shot data sheet, board pictures) cover the open episode, and their file names carry the episode, e.g. `The Emperor EP3 shot data.xlsx`. Picture names inside stay `<Kohtaus>-<board>.png`.
+
 
 Exported board pictures are named `<Kohtaus #>-<board>.png`, e.g. `12-3.png`, or `12-3a.png`, `12-3b.png` for a shot with several boards (spaces and `/ \ : * ? " < > |` become `_`). The Daily Package matches pictures to shots by these names; change the pattern only together with `INTEGRATION.md`.

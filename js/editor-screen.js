@@ -4,7 +4,9 @@ import * as db from "./db.js";
 import {
   LAYER_LABELS, BOARD_WIDTH, boardHeight, RATIOS, ratioLabel, heading, boardLabel, orderedBoards, sceneBoards, sceneOf, ago,
   insertBoardAfter, insertBoardBefore, toggleNewShot, nudgeBoard, duplicateBoard, removeBoard, moveBoard, moveBoardToScene, addScene, removeScene, newScene, nextSceneNumber,
+  shownScenes, episodeScenes, openEpisode, isOn,
 } from "./model.js";
+import { sceneIndex, episodeMenu } from "./scene-index.js";
 import { TOOLS, MOVE, loadToolSettings, saveToolSettings } from "./brush.js";
 import { drawSample } from "./tool-samples.js";
 import { BoardView } from "./board-view.js";
@@ -76,6 +78,8 @@ export function initEditor({ exit }) {
   $("fit").onclick = () => view.fit();
   $("shotgen-btn").onclick = openShotGen;
   $("scene-jump").onchange = (e) => selectBoard(sceneBoards(project, e.target.value)[0], true);
+  $("index-btn").onclick = () => sceneIndex(project, indexHooks);
+  $("episode-btn").onclick = (e) => episodeMenu(e.currentTarget, project, indexHooks);
 
   window.addEventListener("resize", () => project && view.fit());
   document.addEventListener("visibilitychange", () => { if (document.hidden) flush(); });
@@ -85,9 +89,43 @@ export function initEditor({ exit }) {
   document.addEventListener("paste", pastePhoto);
 }
 
+// What the scene index and the episode menu (scene-index.js) tell the editor.
+const indexHooks = {
+  changed: () => {
+    edited();
+    saveSoon();
+    refreshStrip();
+    // The scene on screen was switched off: go to the first board still shown.
+    if (board && !shownScenes(project).some((s) => s.id === board.sceneId)) selectBoard(orderedBoards(project)[0], true);
+  },
+  episode: async () => {
+    keepOneOn();
+    edited();
+    refreshStrip();
+    await selectBoard(orderedBoards(project)[0], true);
+  },
+  jump: (s) => selectBoard(sceneBoards(project, s.id)[0], true),
+  removed: async (boards) => {
+    if (board && boards.includes(board)) { dirty.clear(); board = null; }
+    for (const b of boards) {
+      await db.deleteBoardData(b.id);
+      dropThumb(b.id);
+    }
+  },
+};
+
+// The open episode always has a scene on, so there is a board to show.
+function keepOneOn() {
+  if (shownScenes(project).length) return;
+  const first = episodeScenes(project)[0];
+  if (first) delete first.storyboard;
+  else addScene(project, newScene({ kohtaus: "1" }));
+}
+
 export async function openProject(p) {
   project = p;
   board = null;
+  keepOneOn();
   $("project-title").textContent = p.title;
   view.setSize(BOARD_WIDTH, boardHeight(p.ratio));
   view.forgetHistory();
@@ -249,7 +287,7 @@ async function editScene(id) {
 }
 
 async function deleteScene(s) {
-  if (project.scenes.length === 1) return toast("A project needs at least one scene.");
+  if (isOn(s) && shownScenes(project).length === 1) return toast("The episode needs at least one scene switched on.");
   const n = sceneBoards(project, s.id).length;
   const ok = await confirmBox(`Delete ${heading(s)} and its ${n} ${n === 1 ? "board" : "boards"}? Their drawings go with them.`, { ok: "Delete scene", danger: true });
   if (!ok) return;
@@ -293,8 +331,13 @@ function refreshStrip() {
   renderStrip($("strip"), project, board?.id, thumbs);
   const jump = $("scene-jump");
   jump.innerHTML = "";
-  for (const s of project.scenes) jump.append(new Option(heading(s), s.id));
+  for (const s of shownScenes(project)) jump.append(new Option(heading(s), s.id));
   if (board) jump.value = board.sceneId;
+  const ep = openEpisode(project);
+  $("episode-btn").hidden = !ep;
+  if (ep) $("episode-btn").textContent = ep.name + " ▾";
+  const all = episodeScenes(project).length, on = shownScenes(project).length;
+  $("index-btn").textContent = all === on ? "Scenes" : `Scenes ${on}/${all}`;
 }
 
 // ---------- layers ----------
@@ -588,8 +631,9 @@ function zoomView(k) {
 }
 
 function stepScene(dir) {
-  const i = project.scenes.findIndex((s) => s.id === board.sceneId);
-  const scene = project.scenes[i + dir];
+  const list = shownScenes(project);
+  const i = list.findIndex((s) => s.id === board.sceneId);
+  const scene = list[i + dir];
   if (scene) selectBoard(sceneBoards(project, scene.id)[0], true);
 }
 
@@ -765,6 +809,8 @@ function exportMenu(anchor) {
 }
 
 const safeName = (s) => s.replace(/[\\/:*?"<>|]+/g, "-").trim() || "Untitled";
+// Exports cover the open episode, so their names say which: "The Emperor EP3 storyboard.pdf".
+const exportTitle = () => safeName(project.title + (openEpisode(project) ? " " + openEpisode(project).name : ""));
 
 async function exportProjectFile() {
   await flush();
@@ -882,7 +928,7 @@ async function exportContactSheet(preset = {}) {
   toast("Making PDF…");
   try {
     const blob = await makeContactSheet(project, o);
-    const name = `${safeName(project.title)} ${o.kind === "blank" ? "worksheet" : "storyboard"}.pdf`;
+    const name = `${exportTitle()} ${o.kind === "blank" ? "worksheet" : "storyboard"}.pdf`;
     await shareFile(blob, name, "application/pdf");
   } catch (err) {
     toast("Couldn't make the PDF: " + err.message);
@@ -891,7 +937,7 @@ async function exportContactSheet(preset = {}) {
 
 async function exportShotSheet(kind) {
   await flush();
-  const name = `${safeName(project.title)} shot data.${kind}`;
+  const name = `${exportTitle()} shot data.${kind}`;
   if (kind === "xlsx") await shareFile(await shotSheetXlsx(project), name, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
   else await shareFile(shotSheetCsv(project), name, "text/csv");
 }
@@ -900,7 +946,7 @@ async function exportAllPngs() {
   await flush();
   toast("Preparing pictures…");
   const blob = await boardImagesZip(project, (done, total) => { if (done % 5 === 0) toast(`Preparing pictures… ${done} of ${total}`); });
-  await shareFile(blob, `${safeName(project.title)} boards.zip`, "application/zip");
+  await shareFile(blob, `${exportTitle()} boards.zip`, "application/zip");
 }
 
 async function exportPng() {

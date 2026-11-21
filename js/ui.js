@@ -34,7 +34,7 @@ export function banner(text, actions = []) {
 
 // Resolves as soon as a button is tapped, not on the dialog's close event: that event can arrive
 // late, after the next dialog has already opened. Escape still counts as cancel.
-function modal(build) {
+export function modal(build) {   // build(dialog, done): fill the dialog; done(value) closes it
   const d = $("dialog");
   return new Promise((resolve) => {
     let settled = false;

@@ -61,6 +61,11 @@ Show the moves as a list to confirm, then move the boards with all their drawing
 
 One file per location (proposed name `<Location>.location.json`): room, openings, furniture, north angle, tag, plus optional GPS and a plan image with two calibration points. The app imports and exports these. The chat-side floor-plan step writes them, and the same plan becomes the Shot Designer background.
 
+### 6. Episodes and the full scene index (v0.30.0, 2026-11-21)
+**Done in the app.** One project can hold several episodes (e.g. *The Emperor* with EP3 and EP4). The editor works on one episode at a time; the *Scenes* button lists every scene of the episode's script with a tick box for "storyboard this scene". Imports (Breakdown.xlsx, script, Shot List.xlsx) go into the open episode: the breakdown or script brings the whole scene index in switched off, and the shot list switches on the scenes it brings shots for. Exports cover the open episode and carry its name in the file name.
+
+For the chat side: a starter file can carry episodes by naming them on each scene and board (`"episode": "EP3"`), and a full scene index by listing every scene with `"storyboard": false` on the ones without shots (`docs/project-format.md`, "Episodes in a starter file").
+
 ## Chat side: a set and a Shot Designer plan from photos + measurements
 Worked through on 2026-10-25 with a test photo (a 12 × 18 ft living room). This step runs in Jarmo's normal chat (the floor-plan / shot-planning side), not in the app: it needs the photos, his measurements and the production's folders. Claude there may use its code tool to write the files; the app only reads the result.
 

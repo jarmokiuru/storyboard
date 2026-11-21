@@ -4,7 +4,7 @@
 
 import * as db from "./db.js";
 import * as store from "./board-store.js";
-import { orderedBoards, heading, boardLabel, sceneOf, BOARD_WIDTH, boardHeight } from "./model.js";
+import { orderedBoards, heading as plainHeading, episodeName, boardLabel, sceneOf, BOARD_WIDTH, boardHeight } from "./model.js";
 
 const $ = (id) => document.getElementById(id);
 
@@ -13,6 +13,8 @@ const $ = (id) => document.getElementById(id);
 export const phoneSized = () => /[?&]viewer\b/.test(location.search) || Math.min(screen.width, screen.height) < 600;
 
 let project = null;
+// The phone shows every episode (it has no episode switcher), so headings carry the episode: "EP3 · 12. INT. …".
+const heading = (s) => (episodeName(project, s) ? episodeName(project, s) + " · " : "") + plainHeading(s);
 let boards = [];
 let index = 0;
 let leave;
@@ -49,7 +51,7 @@ export function initViewer({ exit }) {
 
 export async function openViewer(p) {
   project = p;
-  boards = orderedBoards(p);
+  boards = orderedBoards(p, true);
   for (const url of [...thumbs.values(), ...sharp.values()]) URL.revokeObjectURL(url);
   thumbs.clear();
   sharp.clear();

@@ -1,7 +1,7 @@
 // The board strip along the bottom: thumbnails grouped under scene headings. SPEC §6.1.
 // Tap = select. Press and hold, then drag = reorder within the scene.
 
-import { heading, sceneBoards, boardLabel } from "./model.js";
+import { heading, sceneBoards, boardLabel, shownScenes } from "./model.js";
 
 const HOLD_MS = 350;
 let handlers = null;
@@ -79,7 +79,7 @@ export function renderStrip(el, project, currentId, thumbs) {
   const scroll = el.scrollLeft;
   el.innerHTML = "";
   el.style.setProperty("--ratio", project.ratio);
-  for (const scene of project.scenes) {
+  for (const scene of shownScenes(project)) {   // the open episode's scenes that are switched on
     const boards = sceneBoards(project, scene.id);
     if (scene.actBefore) {
       const act = document.createElement("div");

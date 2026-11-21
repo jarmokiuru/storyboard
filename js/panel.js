@@ -2,7 +2,7 @@
 // reference photo. SPEC §6.1, §6.4, §6.6. Every section folds; which ones are open is remembered on the device.
 
 import { foldable } from "./fold.js";
-import { LAYERS, LAYER_LABELS, heading, boardLabel, sceneOf, sceneBoards } from "./model.js";
+import { LAYERS, LAYER_LABELS, heading, boardLabel, sceneOf, sceneBoards, shownScenes } from "./model.js";
 
 const $ = (id) => document.getElementById(id);
 const FIELDS = ["kuva", "kuvakoko", "sisalto", "lens", "movement", "dialogue", "action", "notes"];
@@ -56,7 +56,7 @@ export function fillPanel(project, board) {
   }
   const select = $("f-scene");
   select.innerHTML = "";
-  for (const s of project.scenes) select.append(new Option(heading(s), s.id, false, s.id === board.sceneId));
+  for (const s of shownScenes(project)) select.append(new Option(heading(s), s.id, false, s.id === board.sceneId));
 }
 
 // "8. INT POLICE STATION - PRESS ROOM - LATER / Shot 1a"

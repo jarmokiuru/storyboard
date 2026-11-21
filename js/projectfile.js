@@ -62,13 +62,37 @@ export function normalizeProject(raw) {
   p.firstEditSinceExport = p.firstEditSinceExport ?? null;
 
   p.scenes = (p.scenes || []).map((s) => ({ ...newScene(), ...s, id: s.id || uid(), kohtaus: String(s.kohtaus ?? "") }));
+  // Episodes (v0.30.0): project.episodes [{ id, name }] + scene.episodeId; a starter may name the episode on each
+  // scene and board instead ("episode": "EP3").
+  p.episodes = (p.episodes || []).filter((e) => e && e.name).map((e) => ({ id: e.id || uid(), name: String(e.name) }));
+  const episodeNamed = (name) => {
+    let e = p.episodes.find((x) => x.name === String(name));
+    if (!e) p.episodes.push((e = { id: uid(), name: String(name) }));
+    return e;
+  };
+  for (const s of p.scenes) {
+    if (s.episode != null && s.episode !== "" && !p.episodes.some((e) => e.id === s.episodeId)) s.episodeId = episodeNamed(s.episode).id;
+    delete s.episode;
+    if (typeof s.storyboard !== "boolean") delete s.storyboard;   // missing = on
+  }
+  if (p.episodes.length) {
+    for (const s of p.scenes) if (!p.episodes.some((e) => e.id === s.episodeId)) s.episodeId = p.episodes[0].id;
+    if (!p.episodes.some((e) => e.id === p.openEpisode)) p.openEpisode = p.episodes[0].id;
+  } else {
+    delete p.episodes;
+    delete p.openEpisode;
+    for (const s of p.scenes) delete s.episodeId;
+  }
+  const epName = (s) => p.episodes?.find((e) => e.id === s.episodeId)?.name ?? "";
   const boards = [];
   for (const b of p.boards || []) {
-    const scene = p.scenes.find((s) => s.id === b.sceneId) || p.scenes.find((s) => sameNumber(s.kohtaus, b.kohtaus));
+    const scene = p.scenes.find((s) => s.id === b.sceneId)
+      || p.scenes.find((s) => sameNumber(s.kohtaus, b.kohtaus) && (b.episode == null || epName(s) === String(b.episode)));
     if (!scene) continue;   // a board for a scene that isn't in the file
     const base = newBoard(scene.id, b.kuva ?? 1, b.newShot ?? true);
     const board = { ...base, ...b, id: b.id || uid(), sceneId: scene.id, kuva: String(b.kuva ?? base.kuva), newShot: b.newShot ?? true };
     delete board.kohtaus;
+    delete board.episode;
     board.layers = Object.fromEntries(LAYERS.map((n) => [n, { ...base.layers[n], ...(b.layers?.[n] || {}) }]));
     boards.push(board);
   }

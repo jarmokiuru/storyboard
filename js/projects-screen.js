@@ -5,6 +5,7 @@ import { newProject, RATIOS, ratioLabel, ago } from "./model.js";
 import { formDialog, confirmBox, choose, toast, pickFile } from "./ui.js";
 import { readProjectFile, installProject } from "./projectfile.js";
 import { mergeStarter } from "./importer.js";
+import { sceneCount } from "./episodes.js";
 import { standalone, storageKept } from "./offline.js";
 import { VERSION } from "./version.js";
 import { phoneSized } from "./viewer-screen.js";
@@ -38,7 +39,7 @@ export async function showProjects() {
     li.querySelector("strong").textContent = p.title;
     li.querySelector(".meta").textContent = [
       ratioLabel(p.ratio),
-      p.scenes.length + (p.scenes.length === 1 ? " scene" : " scenes"),
+      sceneCount(p),
       p.boards.length + (p.boards.length === 1 ? " board" : " boards"),
       "edited " + ago(p.modified),
       p.exported ? "exported " + ago(p.exported) : "never exported",

@@ -34,7 +34,7 @@ export async function renumber(project, text) {
     toast("No moves found. The list needs four columns: old Kohtaus #, old Kuva #, new Kohtaus #, new Kuva #.", 6000);
     return false;
   }
-  const scene = (k) => project.scenes.find((s) => norm(s.kohtaus) === norm(k));
+  const scene = (k) => episodeScenes(project).find((s) => norm(s.kohtaus) === norm(k));   // within the open episode
   const problems = [];
   let moves = [];
   for (const r of rows) {
