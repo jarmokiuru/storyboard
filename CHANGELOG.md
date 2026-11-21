@@ -1,5 +1,10 @@
 # Changelog
 
+## 2026-11-21 — Storyboard v0.31.0 (camera moves on the camera plan)
+- The boards of one shot (1a, 1b, 1c…) are read as the camera's start, middle and end positions: the camera plan draws an arrow from camera to camera in board order, with the shot's Movement (e.g. "DOLLY IN, PAN R") beside it. Cameras that don't move (under 15 cm apart) get no arrow.
+- A moving camera's label sits beside the path instead of behind the camera, so it never covers the arrow.
+- New tick box in the export dialog: *Camera moves (1a → 1b)*, on by default.
+
 ## 2026-11-21 — Storyboard v0.30.0 (episodes and the scene index)
 - A project can hold several episodes (e.g. EP3 and EP4). Scenes → *Split into episodes…* starts it: the scenes so far become the first episode, and the new one starts with an empty scene. The episode button in the top bar (EP3 ▾) switches between them; strip, PDF, shot sheet, scene list and imports work on the open episode.
 - New *Scenes* button: the scene index, every scene of the episode in one scrolling list with its shots and synopsis, a search box, and a tick box per scene for storyboarding it. Tap a scene to go to it. Switched-off scenes stay in the index with their data but leave the strip, PDF, shot sheet and phone viewer. One scene always stays on.

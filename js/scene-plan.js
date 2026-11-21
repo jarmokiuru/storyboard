@@ -17,6 +17,7 @@ const rad = (d) => (d * Math.PI) / 180;
 // What the plan shows; Jarmo picks these in the export dialog (camera-plan-dialog.js), kept as project.planOptions.
 export const PLAN_OPTIONS = [
   ["wedges", "Angle of view", true],
+  ["moves", "Camera moves (1a → 1b)", true],
   ["lens", "Lens on the camera labels", true],
   ["cast", "Cast", true],
   ["castNames", "Cast names", true],
@@ -93,6 +94,40 @@ export async function scenePlan(project, scene, loc, options = {}, { asBlob = tr
     const ray = (a) => [cx + Math.sin(rad(a)) * len, cy - Math.cos(rad(a)) * len];
     return { cx, cy, left: ray(cam.pan - half), right: ray(cam.pan + half) };
   });
+  // Camera moves (Jarmo, 2026-11-21): the boards of one shot (1a, 1b, 1c…) are its start, middle and end
+  // positions, so an arrow runs from camera to camera in board order, with the shot's Movement beside it.
+  const shotsOf = new Map();
+  const side = new Map();   // board id → which way its label sits, for cameras on a move
+  for (const k of set) (shotsOf.get(k.board.kuva) || shotsOf.set(k.board.kuva, []).get(k.board.kuva)).push(k);
+  const moves = !o.moves ? [] : [...shotsOf.values()].map((list) => {
+    const pts = [];
+    for (const k of list) {
+      const pt = Q(k.cam.x, k.cam.z);
+      const last = pts[pts.length - 1];
+      if (!last || Math.hypot(pt[0] - last[0], pt[1] - last[1]) >= 0.15 * ppm) pts.push(pt);
+    }
+    if (pts.length < 2) return null;
+    // Each moving camera's label goes to the right of its stretch of the path, clear of the arrow and the words.
+    list.forEach((k, i) => {
+      const here = Q(k.cam.x, k.cam.z);
+      const other = list.slice(i + 1).map((x) => Q(x.cam.x, x.cam.z)).find((q) => Math.hypot(q[0] - here[0], q[1] - here[1]) >= 0.15 * ppm);
+      const prev = list.slice(0, i).reverse().map((x) => Q(x.cam.x, x.cam.z)).find((q) => Math.hypot(q[0] - here[0], q[1] - here[1]) >= 0.15 * ppm);
+      const [from, to] = other ? [here, other] : [prev, here];
+      const l = Math.hypot(to[0] - from[0], to[1] - from[1]);
+      side.set(k.board.id, [(to[1] - from[1]) / l, -(to[0] - from[0]) / l]);
+    });
+    const text = (list.map((k) => k.board.movement).find((m) => m && m.trim()) || "").trim();
+    // The words sit beside the longest stretch, off to its left.
+    let best = 0;
+    for (let i = 1; i < pts.length - 1; i++) if (Math.hypot(pts[i + 1][0] - pts[i][0], pts[i + 1][1] - pts[i][1]) > Math.hypot(pts[best + 1][0] - pts[best][0], pts[best + 1][1] - pts[best][1])) best = i;
+    const [a, b] = [pts[best], pts[best + 1]];
+    const len = Math.hypot(b[0] - a[0], b[1] - a[1]);
+    const nx = -(b[1] - a[1]) / len, ny = (b[0] - a[0]) / len;
+    const tw = text ? textWidth(text, font(fs * 0.85, true)) : 0;
+    const off = fs * 0.7 + Math.abs(nx) * tw / 2 + Math.abs(ny) * fs * 0.6;   // far enough that the words clear the line
+    const tx = (a[0] + b[0]) / 2 + nx * off, ty = (a[1] + b[1]) / 2 + ny * off;
+    return { pts, text, tx, ty, tw };
+  }).filter(Boolean);
   const groups = [];   // cameras within 15 cm share one label
   for (const k of set) {
     const near = groups.find((gr) => Math.hypot(gr[0].cam.x - k.cam.x, gr[0].cam.z - k.cam.z) < 0.15);
@@ -105,11 +140,12 @@ export async function scenePlan(project, scene, loc, options = {}, { asBlob = tr
     const w1 = Math.max(...lines.map(([a]) => textWidth(a, big)));
     const w2 = o.lens ? Math.max(...lines.map(([, b]) => textWidth(b, small))) : 0;
     const bw = w1 + w2 + pad * (o.lens ? 3 : 2), bh = lines.length * lh + pad;
-    // Behind the camera, away from where it looks, so the label never covers the shot.
+    // Behind the camera, away from where it looks, so the label never covers the shot; on a move, beside the path.
     const pan = gr[0].cam.pan;
     const [cx, cy] = Q(gr[0].cam.x, gr[0].cam.z);
-    const back = 0.5 * ppm + fs;
-    const lx = cx - Math.sin(rad(pan)) * back, ly = cy + Math.cos(rad(pan)) * back;
+    const [dx, dy] = side.get(gr.find((k) => side.has(k.board.id))?.board.id) || [-Math.sin(rad(pan)), Math.cos(rad(pan))];
+    const back = 0.4 * ppm + Math.abs(dx) * bw / 2 + Math.abs(dy) * bh / 2;
+    const lx = cx + dx * back, ly = cy + dy * back;
     return { lines, w1, bw, bh, bx: lx - bw / 2, by: ly - bh / 2 };
   });
   const names = figures.filter((f) => showName(f) && (f.name || "").trim() && f.name.trim() !== "?").map((f) => {
@@ -118,6 +154,7 @@ export async function scenePlan(project, scene, loc, options = {}, { asBlob = tr
     const text = f.name.trim();
     return { text, x: fx + Math.sin(rad(f.rot || 0)) * out, y: fy - Math.cos(rad(f.rot || 0)) * out, w: textWidth(text, font(fs * 0.85, true)) };
   });
+
   let minX = 0, minY = 0, maxX = W, maxY = Hp;
   const take = (x0b, y0b, x1b, y1b) => { minX = Math.min(minX, x0b); minY = Math.min(minY, y0b); maxX = Math.max(maxX, x1b); maxY = Math.max(maxY, y1b); };
   const body = 0.32 * ppm;
@@ -127,6 +164,7 @@ export async function scenePlan(project, scene, loc, options = {}, { asBlob = tr
   }
   for (const l of labels) take(l.bx, l.by, l.bx + l.bw, l.by + l.bh);
   for (const n of names) take(n.x - n.w / 2, n.y - fs * 0.6, n.x + n.w / 2, n.y + fs * 0.6);
+  for (const m of moves) if (m.text) take(m.tx - m.tw / 2, m.ty - fs * 0.6, m.tx + m.tw / 2, m.ty + fs * 0.6);
   const edge = fs * 0.5;   // a little white beyond whatever reaches furthest
   const grow = (v) => (v > 0 ? v + edge : 0);
   const padL = grow(-minX), padR = grow(maxX - W), padT = grow(-minY), padB = grow(maxY - Hp);
@@ -222,6 +260,41 @@ export async function scenePlan(project, scene, loc, options = {}, { asBlob = tr
     g.moveTo(...at(w.left)); g.lineTo(cx, cy); g.lineTo(...at(w.right));
     g.stroke();
     g.setLineDash([]);
+  }
+
+  // Move arrows: from each camera to the next of the same shot, stopping short of the bodies, head at the end.
+  for (const m of moves) {
+    const pts = m.pts.map(([x, y]) => [ox + x, oy + y]);
+    const gap = 0.32 * ppm;
+    g.strokeStyle = g.fillStyle = CAMERA;
+    g.lineWidth = Math.max(3, ppm * 0.02);
+    g.lineCap = g.lineJoin = "round";
+    for (let i = 0; i < pts.length - 1; i++) {
+      const [a, b] = [pts[i], pts[i + 1]];
+      const len = Math.hypot(b[0] - a[0], b[1] - a[1]);
+      const ux = (b[0] - a[0]) / len, uy = (b[1] - a[1]) / len;
+      const cut = Math.min(gap, len / 3);
+      const s0 = [a[0] + ux * cut, a[1] + uy * cut], s1 = [b[0] - ux * cut, b[1] - uy * cut];
+      g.beginPath();
+      g.moveTo(...s0);
+      g.lineTo(...s1);
+      g.stroke();
+      const head = Math.max(10, ppm * 0.12);
+      g.beginPath();
+      g.moveTo(s1[0] + ux * head * 0.2, s1[1] + uy * head * 0.2);
+      g.lineTo(s1[0] - ux * head - uy * head * 0.55, s1[1] - uy * head + ux * head * 0.55);
+      g.lineTo(s1[0] - ux * head + uy * head * 0.55, s1[1] - uy * head - ux * head * 0.55);
+      g.closePath();
+      g.fill();
+    }
+    g.lineCap = "butt";
+    g.lineJoin = "miter";
+    if (m.text) {
+      g.font = font(fs * 0.85, true);
+      g.textAlign = "center";
+      g.fillText(m.text, ox + m.tx, oy + m.ty);
+      g.textAlign = "left";
+    }
   }
 
   // Figures: a disc in the figure's colour with a nose for where it faces, and the name.
