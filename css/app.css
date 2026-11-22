@@ -1,19 +1,25 @@
 /* Storyboard — dark chrome around a white board, after Storyboarder. */
 
 :root {
-  --bg: #1d1f23;
-  --bar: #26282d;
-  --raised: #33363c;
-  --raised-hi: #42464d;
-  --text: #e8e6e1;
-  --muted: #9a9ea6;
-  --accent: #e8e6e1;
-  --accent-text: #1d1f23;
-  --danger: #d9534a;
-  --surround: #4b4e54;
+  /* Apple-style dark (v0.32.0): near-black base, grouped cards a step lighter, title strips a step above that. */
+  --bg: #101012;
+  --bar: #1c1c1f;
+  --card: #1e1e21;
+  --card-head: #36363b;
+  --raised: #2f2f33;
+  --raised-hi: #3c3c41;
+  --field: #131315;
+  --text: #f2f2f7;
+  --muted: #8e8e95;
+  --accent: #0a84ff;
+  --accent-hi: #409cff;
+  --accent-text: #ffffff;
+  --mark: #ffb340;
+  --danger: #ff453a;
+  --surround: #3a3a3e;
   --paper: #ffffff;
   --line: rgba(255, 255, 255, 0.08);
-  --radius: 8px;
+  --radius: 9px;
 }
 
 * { box-sizing: border-box; }
@@ -429,7 +435,7 @@ input[type=range] { touch-action: none; }
 /* ---------- telling buttons apart ---------- */
 
 button:hover:not(:disabled) { background: var(--raised-hi); }
-button.on:hover, button.primary:hover { background: #ffffff; }
+button.on:hover, button.primary:hover { background: var(--accent-hi); }
 button:active:not(:disabled) { transform: translateY(1px); }
 .bar { gap: 6px; }
 .sep { flex: none; width: 1px; align-self: stretch; margin: 8px 4px; background: rgba(255, 255, 255, 0.14); }
@@ -588,3 +594,80 @@ dialog:has(.si-list) { width: min(640px, calc(100vw - 32px)); }
 .si-list li.si-act { font-weight: bold; font-size: 12px; letter-spacing: 0.05em; color: var(--muted); padding-top: 12px; }
 .si-name { flex: 1; display: grid; gap: 2px; text-align: left; background: none; border: 0; padding: 2px 0; min-height: 0; color: var(--text); }
 .si-name span { font-size: 12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* ---------- Apple-style finish (v0.32.0): fonts, colours and shading only; nothing moved ---------- */
+
+html, body { font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", sans-serif; letter-spacing: -0.005em; -webkit-font-smoothing: antialiased; }
+button { border: 0; background: var(--raised); box-shadow: inset 0 0.5px 0 rgba(255, 255, 255, 0.07); transition: background 0.12s; }
+button.on, button.primary { box-shadow: 0 1px 6px rgba(10, 132, 255, 0.28); font-weight: 600; }
+button.danger { color: #ff6961; }
+input, select, textarea { background: var(--field); border: 1px solid rgba(255, 255, 255, 0.06); border-radius: 8px; transition: border-color 0.12s, box-shadow 0.12s; }
+input:focus, select:focus, textarea:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px rgba(10, 132, 255, 0.25); }
+input[type=range] { accent-color: var(--accent); }
+input[type=checkbox] { accent-color: var(--accent); }
+
+/* Bars: frosted, with a hairline below. */
+.bar { background: rgba(28, 28, 31, 0.86); -webkit-backdrop-filter: saturate(180%) blur(20px); backdrop-filter: saturate(180%) blur(20px); border-bottom: 0.5px solid rgba(255, 255, 255, 0.1); }
+#top-bar .title, #sg-title { font-weight: 650; letter-spacing: -0.01em; }
+.sep { background: rgba(255, 255, 255, 0.1); }
+
+/* Side panels: darker base, each section a rounded card; its title sits on a lighter strip above the contents. */
+#panel, #sg-panel { background: var(--bg); border-left: 0.5px solid rgba(255, 255, 255, 0.08); }
+#panel .panel-head { border-bottom: 0; padding: 2px 4px 12px; margin-bottom: 4px; }
+#panel .panel-head .heading { font-size: 17px; font-weight: 700; letter-spacing: -0.015em; line-height: 1.25; }
+#panel .panel-head .shot-name { color: var(--accent-hi); font-weight: 600; }
+#board-label { color: var(--muted); }
+:is(#panel, #sg-panel) details.psec {
+  padding: 0; margin-bottom: 10px; border-bottom: 0; border-radius: 12px; overflow: hidden;
+  background: var(--card); box-shadow: 0 1px 2px rgba(0, 0, 0, 0.35), inset 0 0 0 0.5px rgba(255, 255, 255, 0.06);
+}
+:is(#panel, #sg-panel) details.psec:last-child { margin-bottom: 0; }
+:is(#panel, #sg-panel) details.psec > summary {
+  min-height: 36px; padding: 0 12px; background: var(--card-head);
+  font-size: 13px; font-weight: 600; letter-spacing: -0.005em;
+}
+:is(#panel, #sg-panel) details.psec[open] > summary { border-bottom: 0.5px solid rgba(0, 0, 0, 0.45); box-shadow: 0 0.5px 0 rgba(255, 255, 255, 0.04); }
+:is(#panel, #sg-panel) details.psec > summary h3 { font-size: 13px; font-weight: 600; text-transform: none; letter-spacing: -0.005em; color: var(--text); }
+:is(#panel, #sg-panel) details.psec > summary::before { content: "›"; font-size: 17px; line-height: 1; width: 10px; color: var(--muted); }
+:is(#panel, #sg-panel) .psec-body { padding: 10px 12px 12px; }
+#panel label > span, #sg-panel label > span { font-size: 12px; font-weight: 500; color: var(--muted); }
+#panel details.psec.buttons .psec-body button { background: var(--raised); }
+
+/* Shot list: grouped rows with hairlines, the chosen shot filled blue. */
+#shot-list { gap: 0; margin: -4px -6px; }
+#shot-list li + li button { box-shadow: inset 0 0.5px 0 rgba(255, 255, 255, 0.06); }
+#shot-list button { padding: 8px 8px; font-size: 14px; border-radius: 8px; }
+#shot-list button:hover:not(.on) { background: rgba(255, 255, 255, 0.05); }
+#shot-list button.on { background: var(--accent); color: #fff; box-shadow: none; }
+#shot-list .num { font-weight: 700; font-variant-numeric: tabular-nums; }
+#shot-list button.on .what { color: rgba(255, 255, 255, 0.85); }
+
+#layers li.active { background: rgba(10, 132, 255, 0.16); }
+#layers .eye, #layers .name { box-shadow: none; }
+
+/* Tool column and strip: same chrome as the bars. */
+#tools, #strip { background: var(--bar); }
+#tools { border-right: 0.5px solid rgba(255, 255, 255, 0.08); }
+#strip { border-top: 0.5px solid rgba(255, 255, 255, 0.08); }
+.scene-head .heading { font-weight: 650; }
+.board img { border-radius: 5px; box-shadow: 0 1px 4px rgba(0, 0, 0, 0.4); }
+.board.current img { outline-color: var(--accent); outline-width: 2.5px; outline-offset: 1px; }
+.swatch { box-shadow: inset 0 0 0 0.5px rgba(255, 255, 255, 0.2); }
+.swatch.on { border-color: var(--accent); }
+#stack { box-shadow: 0 10px 40px rgba(0, 0, 0, 0.45), 0 0 0 0.5px rgba(0, 0, 0, 0.3); }
+
+/* Joined choices, menus, dialogs and messages. */
+#sg-views, .seg, .move-modes { background: rgba(118, 118, 128, 0.24); border-radius: 9px; }
+#sg-views button, .seg button, .move-modes button { box-shadow: none; border-radius: 7px; }
+#sg-views button.on, .seg button.on, .move-modes button.on { background: #636366; color: #fff; box-shadow: 0 2px 6px rgba(0, 0, 0, 0.35); }
+#menu { background: rgba(44, 44, 48, 0.92); -webkit-backdrop-filter: saturate(180%) blur(24px); backdrop-filter: saturate(180%) blur(24px); border-radius: 12px; box-shadow: 0 12px 40px rgba(0, 0, 0, 0.5), inset 0 0 0 0.5px rgba(255, 255, 255, 0.1); }
+.menu-item { box-shadow: none; border-radius: 7px; }
+.menu-item:hover { background: var(--accent); color: #fff; }
+dialog { background: #1f1f22; border-radius: 16px; box-shadow: 0 24px 70px rgba(0, 0, 0, 0.6), inset 0 0 0 0.5px rgba(255, 255, 255, 0.1); }
+dialog h2 { font-weight: 700; letter-spacing: -0.015em; }
+dialog::backdrop { background: rgba(0, 0, 0, 0.45); -webkit-backdrop-filter: blur(4px); backdrop-filter: blur(4px); }
+dialog label.check input, .si-list li input { accent-color: var(--accent); }
+#toast, #banner { background: rgba(44, 44, 48, 0.94); -webkit-backdrop-filter: blur(20px); backdrop-filter: blur(20px); border-radius: 14px; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.45), inset 0 0 0 0.5px rgba(255, 255, 255, 0.1); }
+#sg-selected { background: var(--card); border-radius: 12px; box-shadow: inset 0 0 0 0.5px rgba(255, 255, 255, 0.06); }
+#project-list .open { background: var(--card); border-radius: 12px; }
+#project-list .open:hover { background: var(--raised); }

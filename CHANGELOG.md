@@ -1,5 +1,10 @@
 # Changelog
 
+## 2026-11-22 — Storyboard v0.32.0 (new look)
+- Apple-style dark finish: near-black base, blue for the chosen tool, shot and buttons, frosted top bars, menus and messages, rounded dialogs. Nothing moved.
+- Side panels: each section is a rounded card whose title sits on a lighter strip, so titles (Shot list, Shot details…) stand apart from their contents. The slugline is larger; the chosen shot in the list is filled blue.
+- Input boxes are darker inside the cards and get a blue ring while typing.
+
 ## 2026-11-21 — Storyboard v0.31.0 (camera moves on the camera plan)
 - The boards of one shot (1a, 1b, 1c…) are read as the camera's start, middle and end positions: the camera plan draws an arrow from camera to camera in board order, with the shot's Movement (e.g. "DOLLY IN, PAN R") beside it. Cameras that don't move (under 15 cm apart) get no arrow.
 - A moving camera's label sits beside the path instead of behind the camera, so it never covers the arrow.
