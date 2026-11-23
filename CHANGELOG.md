@@ -1,5 +1,8 @@
 # Changelog
 
+## 2026-11-23 — Storyboard v0.35.0 (thin dividers between shots)
+- Board strip: the blue tint on multi-board shots is gone. A shot's boards (4a, 4b…) sit 2 px apart, and a thin upright line stands between shots, as in Storyboarder.
+
 ## 2026-11-23 — Storyboard v0.34.0 (camera moves keep their start; shots joined in the strip)
 - Shot Generator, *Save as new board*: the board you started from keeps the camera it was saved with; only the new board gets the moved view. Before, both got the moved view, so 4a and 4b sat on the same spot and the camera plan showed no move.
 - Board strip: the boards of one shot (4a, 4b…) sit together on a blue-tinted strip; a wider gap marks where the next shot starts.

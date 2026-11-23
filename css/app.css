@@ -672,9 +672,7 @@ dialog label.check input, .si-list li input { accent-color: var(--accent); }
 #project-list .open { background: var(--card); border-radius: 12px; }
 #project-list .open:hover { background: var(--raised); }
 
-/* Strip: one shot's boards joined on a tinted strip, a wider gap where the next shot starts (v0.34.0). */
-.scene .boards { gap: 14px; align-items: flex-start; }
-.scene .shot { display: flex; gap: 4px; }
-.scene .shot.multi { gap: 3px; padding: 3px 4px 2px; margin: -3px -4px -2px; border-radius: 8px; background: rgba(10, 132, 255, 0.16); box-shadow: inset 0 0 0 1px rgba(10, 132, 255, 0.35); }
-.scene .shot.multi .board span { color: #9ccaff; }
-.scene .shot.multi .board.current span { color: var(--text); }
+/* Strip: a shot's boards sit close together; a thin upright divider stands between shots, as in Storyboarder (v0.35.0). */
+.scene .boards { gap: 0; align-items: stretch; }
+.scene .shot { display: flex; gap: 2px; }
+.scene .shot + .shot { margin-left: 7px; padding-left: 7px; border-left: 1px solid rgba(255, 255, 255, 0.28); }
