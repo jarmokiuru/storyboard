@@ -357,9 +357,17 @@ async function save() {
 
 
 // Storyboarder's "insert as new shot": keep working here, now on the new board.
-async function saveAsNew() {
+// sameShot: the next board of this shot (4 → 4a, 4b); otherwise the next shot.
+function saveAsNewMenu(anchor) {
+  openMenu(anchor, [
+    { label: `Next board of shot ${board.kuva} (e.g. end of a camera move)`, action: () => saveAsNew(true) },
+    { label: "New shot (next Kuva #)", action: () => saveAsNew(false) },
+  ]);
+}
+
+async function saveAsNew(sameShot) {
   keepCamera();
-  const made = await hooks.saveAsNew(board.id, picture(), shot3d());
+  const made = await hooks.saveAsNew(board.id, picture(), shot3d(), sameShot);
   board = made.board;
   figures = boardFigures(project, scene, board);
   placingBoard(board, figures);
@@ -665,7 +673,7 @@ function bind() {
   for (const t of ["pointerup", "pointercancel"]) document.addEventListener(t, (e) => { pressed.delete(e.pointerId); setTimeout(watchUndo, 0); }, true);
   setInterval(watchUndo, 400);   // also catches changes that finish later (a model loading, a dialog)
   $("sg-save").onclick = save;
-  $("sg-save-new").onclick = saveAsNew;
+  $("sg-save-new").onclick = (e) => saveAsNewMenu(e.currentTarget);
   $("sg-set").onclick = (e) => setMenu(e.currentTarget);
   $("sg-add").onclick = (e) => addMenu(e.currentTarget);
   $("sg-reset").onclick = () => { shot = defaultShot(loc.room); apply(); };

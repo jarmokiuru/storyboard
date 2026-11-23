@@ -3,10 +3,11 @@
 import * as db from "./db.js";
 import {
   LAYER_LABELS, BOARD_WIDTH, boardHeight, RATIOS, ratioLabel, heading, boardLabel, orderedBoards, sceneBoards, sceneOf, ago,
-  insertBoardAfter, insertBoardBefore, toggleNewShot, nudgeBoard, duplicateBoard, removeBoard, moveBoard, moveBoardToScene, addScene, removeScene, newScene, nextSceneNumber,
+  insertBoardAfter, insertBoardBefore, nextKuva, toggleNewShot, nudgeBoard, duplicateBoard, removeBoard, moveBoard, moveBoardToScene, addScene, removeScene, newScene, nextSceneNumber,
   shownScenes, episodeScenes, openEpisode, isOn,
 } from "./model.js";
 import { sceneIndex, episodeMenu } from "./scene-index.js";
+import { boardMenu } from "./board-menu.js";
 import { TOOLS, MOVE, loadToolSettings, saveToolSettings } from "./brush.js";
 import { drawSample } from "./tool-samples.js";
 import { BoardView } from "./board-view.js";
@@ -62,6 +63,7 @@ export function initEditor({ exit }) {
   initStrip($("strip"), {
     select: (id) => selectBoard(byId(id)),
     reorder, toggleScene, editScene, addScene: addSceneDialog,
+    menu: openBoardMenu,
   });
 
   $("back").onclick = async () => { await flush(); leave(); };
@@ -177,10 +179,33 @@ async function newBoard(newShot) {
   await selectBoard(b, true);
 }
 
-async function duplicateCurrent() {
+// The strip's board menu (board-menu.js): select the pressed board, then offer actions on it.
+async function openBoardMenu(id, anchor) {
+  const b = byId(id);
+  if (!b) return;
+  if (b !== board) await selectBoard(b);
+  boardMenu(anchor, project, board, {
+    newBoard: () => newBoard(false),
+    newShot: () => newBoard(true),
+    duplicate: () => duplicateCurrent(),
+    duplicateAsShot: () => duplicateCurrent(true),
+    move: (dir) => moveCurrent(dir),
+    toggleShot,
+    remove: deleteCurrent,
+  });
+}
+
+// asShot: the copy becomes the next shot (next free Kuva #), placed after the last board of this shot.
+async function duplicateCurrent(asShot = false) {
   await flush();
   const src = board;
   const b = duplicateBoard(project, src);
+  if (asShot) {
+    const inShot = sceneBoards(project, src.sceneId).filter((x) => x !== b && x.kuva === src.kuva);
+    b.newShot = true;
+    b.kuva = String(nextKuva(project, src.sceneId));
+    moveBoard(project, b, inShot[inShot.length - 1], true);
+  }
   for (const [name, st] of Object.entries(src.layers)) {
     if (!st.hasData) continue;
     const blob = await db.getLayer(src.id, name);
@@ -556,11 +581,12 @@ const KEY_LIST = `Drawing
   [ and ]  smaller / bigger
   Shift  straight line · Alt-drag  quick erase · Space-drag  pan
   Cmd-drag  move layer · Cmd-Alt-drag  scale layer · hold I and click  pick colour
-  Backspace  clear all drawing layers · Alt-Backspace  clear the active layer
+  Shift-Backspace  clear all drawing layers · Alt-Backspace  clear the active layer
 
 Boards
   N  new board (next Kuva #) · Shift-N  new board before this one (same shot)
-  /  toggle "new shot" on this board · D  duplicate · Cmd-Backspace  delete board
+  /  toggle "new shot" on this board · D  duplicate · Backspace  delete board (asks first)
+  Hold a board in the strip and let go, tap the board you're on, or right-click it: the board's menu
   ← →  previous / next board · Alt-← →  move board left / right
   Cmd-← →  previous / next scene
 
@@ -611,7 +637,9 @@ function keyDown(e) {
   if (e.key === "Tab") return run(() => cycleView(e.shiftKey ? -1 : 1));
   if (key === "f") return run(() => setLayout({ focus: !layout.focus }));
   if (key === "p") return run(() => setLayout({ panelHidden: !(layout.panelHidden || layout.focus), focus: false }));
-  if (e.key === "Backspace" || e.key === "Delete") return run(() => (e.altKey ? clearLayer(false) : view.clearDrawing()));
+  // Backspace deletes the board (Jarmo, 2026-11-23; it asks first). Storyboarder clears the drawing with it; here
+  // that moved to Shift-Backspace.
+  if (e.key === "Backspace" || e.key === "Delete") return run(() => (e.altKey ? clearLayer(false) : e.shiftKey ? view.clearDrawing() : deleteCurrent()));
   if (e.key === " ") return run(() => (view.spaceHeld = true));
 }
 
@@ -887,9 +915,10 @@ async function openShotGen() {
       toast(`Saved to board ${boardLabel(project, b)}'s reference layer.${note ? " " + note + "." : ""} Draw over it, or dim it in Layers.`, note ? 5000 : 2600);
     },
     // A new board after the one in the Shot Generator, as the next shot (next Kuva #), with this camera view on it.
-    saveAsNew: async (id, picture, shot3d) => {
+    // sameShot: the next board of the same shot (4 → 4a, 4b), e.g. a camera move's end position.
+    saveAsNew: async (id, picture, shot3d, sameShot = false) => {
       await flush();
-      const b = insertBoardAfter(project, byId(id), true);
+      const b = insertBoardAfter(project, byId(id), !sameShot);
       edited();
       refreshStrip();
       await selectBoard(b, true);

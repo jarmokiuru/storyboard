@@ -159,6 +159,8 @@ export function openMenu(anchor, items) {
   m.style.top = r.bottom + 6 + "px";
   m.style.right = Math.max(8, window.innerWidth - r.right) + "px";
   m.hidden = false;
+  // Near the bottom (the board strip): open above the anchor instead.
+  if (r.bottom + 6 + m.offsetHeight > window.innerHeight - 8) m.style.top = Math.max(8, r.top - 6 - m.offsetHeight) + "px";
   setTimeout(() => document.addEventListener("pointerdown", outside, true));
 }
 

@@ -1,5 +1,6 @@
 // The board strip along the bottom: thumbnails grouped under scene headings. SPEC §6.1.
-// Tap = select. Press and hold, then drag = reorder within the scene.
+// Tap = select. Press and hold, then drag = reorder within the scene. Hold and let go without dragging, tap the
+// board you're already on, or right-click = the board's menu (board-menu.js).
 
 import { heading, sceneBoards, boardLabel, shownScenes } from "./model.js";
 
@@ -17,9 +18,17 @@ export function initStrip(el, h) {
     else if (e.target.closest(".add-scene")) handlers.addScene();
   });
 
-  el.addEventListener("pointerdown", (e) => {
+  el.addEventListener("contextmenu", (e) => {
     const btn = e.target.closest(".board");
     if (!btn) return;
+    e.preventDefault();
+    cancel();
+    openMenuFor(btn);
+  });
+
+  el.addEventListener("pointerdown", (e) => {
+    const btn = e.target.closest(".board");
+    if (!btn || e.button !== 0) return;
     press = { id: btn.dataset.id, btn, x: e.clientX, y: e.clientY, pointer: e.pointerId, dragging: false, target: null };
     press.timer = setTimeout(() => {
       press.dragging = true;
@@ -55,13 +64,24 @@ export function initStrip(el, h) {
     press = null;
     p.btn.classList.remove("dragging");
     clearMarks(el);
-    if (!p.dragging) handlers.select(p.id);
-    else if (p.target) handlers.reorder(p.id, p.target.id, p.target.after);
+    if (!p.dragging) {
+      if (p.btn.classList.contains("current")) openMenuFor(p.btn);
+      else handlers.select(p.id);
+    } else if (p.target) handlers.reorder(p.id, p.target.id, p.target.after);
+    else openMenuFor(p.btn);
   });
 
   el.addEventListener("pointercancel", cancel);
   // While dragging a board, don't let the strip scroll under the finger.
   el.addEventListener("touchmove", (e) => { if (press?.dragging) e.preventDefault(); }, { passive: false });
+}
+
+// A long press can also raise the system's own "context menu" event; open the board menu once.
+let lastMenu = 0;
+function openMenuFor(btn) {
+  if (performance.now() - lastMenu < 600) return;
+  lastMenu = performance.now();
+  handlers.menu(btn.dataset.id, btn);
 }
 
 function cancel() {

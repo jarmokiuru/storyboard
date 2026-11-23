@@ -1,5 +1,11 @@
 # Changelog
 
+## 2026-11-23 — Storyboard v0.33.0 (board menu, Backspace deletes a board)
+- Board menu in the strip: hold a board and let go, tap the board you're already on, or right-click it. New board in this shot, new shot after this, duplicate in this shot, duplicate as a new shot (next Kuva #, placed after the shot's last board), move left/right, start a new shot here / join the previous shot, delete.
+- Backspace deletes the board on screen (it asks first). Clearing all drawing layers moved to Shift-Backspace; Alt-Backspace still clears the active layer.
+- Shot Generator: *Save as new board ▾* now asks: the next board of this shot (4 → 4a, 4b, e.g. the end of a camera move) or a new shot.
+- Menus near the bottom of the screen open upwards.
+
 ## 2026-11-22 — Storyboard v0.32.0 (new look)
 - Apple-style dark finish: near-black base, blue for the chosen tool, shot and buttons, frosted top bars, menus and messages, rounded dialogs. Nothing moved.
 - Side panels: each section is a rounded card whose title sits on a lighter strip, so titles (Shot list, Shot details…) stand apart from their contents. The slugline is larger; the chosen shot in the list is filled blue.
