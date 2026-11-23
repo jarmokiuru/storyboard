@@ -1,5 +1,13 @@
 # Changelog
 
+## 2026-11-23 — Storyboard v0.36.0 (real sun from day, time and GPS)
+- Shot Generator → Set… → *Room, openings and real sun…*: the set's GPS (paste from Maps), time zone, and which way the plan's top wall really faces (compass degrees).
+- Light panel: **Day** and **Time**. Moving the time puts the sun where the real one is at that location (worked out on the device, no signal needed). A note gives the real sun's bearing and height, sunrise and sunset, and says when the sun is down or has been tweaked by hand; ↺ by the time goes back to the real sun.
+- The Sun slider now reads true compass degrees once the set's north is set. Height goes down to 1°.
+- Scenes can carry their scheduled shooting day and time from a starter file; the real sun starts from them.
+- Camera plan footer says which way the plan's top faces when it isn't true north.
+- Fixes: the Shot Generator panel no longer squeezes its sections to fit the screen (it scrolls), and its tick boxes are normal size again.
+
 ## 2026-11-23 — Storyboard v0.35.0 (thin dividers between shots)
 - Board strip: the blue tint on multi-board shots is gone. A shot's boards (4a, 4b…) sit 2 px apart, and a thin upright line stands between shots, as in Storyboarder.
 

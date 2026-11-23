@@ -365,7 +365,9 @@ export async function scenePlan(project, scene, loc, options = {}, { asBlob = tr
     g.font = font(fs * 0.85);
     g.fillText("1 m", fs * 1.5 + bar, fy);
     g.font = font(fs * 0.85, true);
-    g.fillText("N ↑", fs * 4 + bar, fy);
+    // The plan's top is "north" for walls; when the set's true north differs, say which way the top really faces.
+    const north = Math.round(loc?.room?.north || 0);
+    g.fillText(north ? `Top ↑ faces ${north}° true` : "N ↑", fs * 4 + bar, fy);
   }
   if (noteText) {
     g.font = font(fs * 0.85);

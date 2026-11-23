@@ -19,7 +19,7 @@ const COLUMNS = {
 };
 const REQUIRED = { breakdown: ["kohtaus"], shotlist: ["kohtaus", "kuva"] };
 
-const SCENE_FIELDS = { intExt: "INT/EXT", lokaatio: "Lokaatio", aika: "Vuorokaudenaika", synopsis: "Synopsis", henkilot: "Henkilöt", actBefore: "Act divider" };
+const SCENE_FIELDS = { intExt: "INT/EXT", lokaatio: "Lokaatio", aika: "Vuorokaudenaika", synopsis: "Synopsis", henkilot: "Henkilöt", actBefore: "Act divider", shootDate: "Shooting day", shootTime: "Shooting time" };
 const SHOT_FIELDS = { kuvakoko: "Kuvakoko", sisalto: "Sisältö", lens: "Lens/Focal", movement: "Movement", notes: "Notes", dialogue: "Dialogue", action: "Action" };
 
 // Scenes are matched by Kohtaus # within one episode (EP3's scene 12 is not EP4's). ep = episode id, or null for a

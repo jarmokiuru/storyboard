@@ -105,3 +105,10 @@ The test run's scripts (room reading → starter file, blank plan) were small Py
 - **Daily Package:** a board picture beside each shot on the scene pages.
 - **Briefs:** camera heights from the boards may flag low-mode or high-rig set-ups in the GRIP brief; the lenses per day may feed the CAM brief.
 - **Checks:** shots without a board, Lens/Focal mismatches, turning-point shots without a board.
+
+## Real sun in the Shot Generator (v0.36.0, 2026-11-23)
+The app now places the sun from the set's GPS and the shooting day and time. The chat side can feed it:
+- **Location files:** `location.gps = { lat, lon, timeZone }` (IANA zone, e.g. `"Europe/Helsinki"`) and `location.room.north` = the true compass bearing the plan's top wall faces (e.g. from an Artemis scout frame's bearing or a site plan's north arrow).
+- **Starter files:** each scene may carry `shootDate` (`"YYYY-MM-DD"`) and `shootTime` (`"HH:MM"`, location clock) from the schedule. As the schedule moves, a merge updates them (listed as changes). A scene whose light already has a hand-set day keeps it; the Shot Generator then notes "The schedule now says …".
+- The app uses NOAA's equations, the same family as `psa-200-rule-check`, so bearings should agree within a degree.
+

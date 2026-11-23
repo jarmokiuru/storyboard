@@ -676,3 +676,12 @@ dialog label.check input, .si-list li input { accent-color: var(--accent); }
 .scene .boards { gap: 0; align-items: stretch; }
 .scene .shot { display: flex; gap: 2px; }
 .scene .shot + .shot { margin-left: 7px; padding-left: 7px; border-left: 1px solid rgba(255, 255, 255, 0.28); }
+
+/* Shot Generator: shooting day and time for the real sun (v0.36.0). */
+.sg-sunday input[type="date"] { grid-column: 2 / 4; min-height: 30px; padding: 2px 6px; border: 1px solid var(--line); border-radius: 6px; background: var(--field); color: var(--text); font-size: 13px; }
+.sg-sunday > span:empty { display: none; }
+.sg-sun-note { margin: 2px 0 6px; font-size: 12px; }
+/* The Shot Generator panel's sections keep their full height and the panel scrolls (v0.36.0): the rounded cards
+   (overflow hidden) let the grid squeeze every section to an equal share of the screen. */
+#sg-panel { grid-auto-rows: max-content; }
+#sg-panel label.sg-check input[type="checkbox"] { width: 20px; height: 20px; min-height: 0; margin: 0; padding: 0; flex: none; }

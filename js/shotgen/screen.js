@@ -21,6 +21,7 @@ import { openingsEditor } from "./openings-editor.js";
 import { sceneBlocking, boardFigures, syncColours, pictureStale, setStamp, boardLight } from "./blocking.js";
 import { makeUndo } from "./undo.js";
 import { foldable } from "../fold.js";
+import { sunAt, sunTimes, clock, parseClock, parseGps, deviceZone, validZone, zoneList } from "../sun.js";
 
 const $ = (id) => document.getElementById(id);
 const SLIDERS = [
@@ -299,15 +300,67 @@ function lightFor(p, b) {
 // [key, label, min, max, step, title] — modelled on Storyboarder's World panel (ambient intensity; directional
 // intensity, rotation and tilt; background brightness), in the units a DP would use.
 const LIGHT_ROWS = [
-  ["dir", "Sun", 0, 360, 5, "Where the sun comes from on the plan: 0° = from north, 90° = from east"],
-  ["height", "Height", 5, 90, 1, "How high the sun is above the horizon: low = long shadows, 90° = straight overhead"],
+  ["dir", "Sun", 0, 360, 5, "Where the sun comes from, in compass degrees: 0° = from north, 90° = from east (true north once the set's north is set in Set…)"],
+  ["height", "Height", 1, 90, 1, "How high the sun is above the horizon: low = long shadows, 90° = straight overhead"],
   ["sun", "Strength", 0, 100, 1, "How bright the sun is"],
   ["fill", "Fill", 0, 100, 1, "Ambient light: how bright the shadow side is"],
   ["diffusion", "Diffusion", 0, 100, 1, "How soft the sun is: 0 = hard sun, 100 = overcast (soft, faint shadows)"],
   ["outside", "Outside", 0, 100, 1, "Brightness of the sky outside — what you see through the window or behind an exterior"],
 ];
 const COMPASS = ["N", "NE", "E", "SE", "S", "SW", "W", "NW"];
-const lightText = (key, v) => (key === "walls" ? "" : key === "dir" ? `${v}° ${COMPASS[Math.round(v / 45) % 8]}` : key === "height" ? `${v}°` : `${v}%`);
+const compass = (bearing) => COMPASS[Math.round((((bearing % 360) + 360) % 360) / 45) % 8];
+// The light stores the sun's direction on the plan (0 = the plan's top); the Sun slider shows true compass degrees,
+// turned by the set's north, so it reads the same as the real-sun note and a compass on location.
+const planNorth = () => loc?.room?.north || 0;
+const toCompass = (planDir) => Math.round((((planDir + planNorth()) % 360) + 360) % 360);
+const toPlan = (bearing) => (((bearing - planNorth()) % 360) + 360) % 360;
+const lightText = (key, v) => (key === "walls" ? "" : key === "dir" ? `${toCompass(v)}° ${compass(toCompass(v))}` : key === "height" ? `${v}°` : `${v}%`);
+
+// Real sun (v0.36.0): the set's place on Earth and the shooting day and clock time give the sun's direction and
+// height; the sliders can then tweak it. place = { lat, lon, timeZone } or null when the set has no GPS.
+function place() {
+  const g = loc?.gps;
+  if (!g || !Number.isFinite(Number(g.lat)) || !Number.isFinite(Number(g.lon))) return null;
+  return { lat: Number(g.lat), lon: Number(g.lon), timeZone: validZone(g.timeZone) ? g.timeZone : deviceZone() };
+}
+const today = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`; };
+const DATE = /^\d{4}-\d{2}-\d{2}$/;
+// The day and time shown: the light's own, else the scene's shooting day and time (from the schedule), else today, 12:00.
+const sunDate = () => (DATE.test(light.date || "") ? light.date : DATE.test(scene?.shootDate || "") ? scene.shootDate : today());
+const sunTime = () => (Number.isFinite(light.time) ? light.time : parseClock(scene?.shootTime) ?? 720);
+function realSun() {
+  const pl = place();
+  if (!pl) return null;
+  const s = sunAt(pl, sunDate(), sunTime());
+  return { ...s, dir: Math.round((((s.azimuth - (loc.room.north || 0)) % 360) + 360) % 360), height: Math.round(s.elevation) };
+}
+// Moves the sun to the real one at the shown day and time (and stores that day and time on the light).
+function followSun() {
+  light.date = sunDate();
+  light.time = sunTime();
+  const r = realSun();
+  if (r) {
+    light.dir = r.dir % 360;
+    light.height = Math.min(90, Math.max(1, r.height));
+  }
+  showLight();
+}
+let timesCache = { key: "", t: null };
+function sunNote() {
+  const pl = place();
+  if (!pl) return "Add the set's GPS in Set… → Room, openings and real sun to follow the real sun on this day and time.";
+  const key = JSON.stringify([pl, sunDate()]);
+  if (timesCache.key !== key) timesCache = { key, t: sunTimes(pl, sunDate()) };
+  const t = timesCache.t;
+  const r = realSun();
+  const day = t.rise == null && t.set == null ? (t.high > 0 ? "sun up all day" : "sun down all day")
+    : `sunrise ${t.rise == null ? "–" : clock(t.rise)}, sunset ${t.set == null ? "–" : clock(t.set)}`;
+  let text = `Real sun at ${clock(sunTime())}: from ${Math.round(r.azimuth)}° ${compass(r.azimuth)}, ${r.elevation.toFixed(0)}° high · ${day}.`;
+  if (DATE.test(scene?.shootDate || "") && light.date && light.date !== scene.shootDate) text += ` The schedule now says ${scene.shootDate}${scene.shootTime ? " " + scene.shootTime : ""}.`;
+  if (r.elevation < 0) text += " The sun is down: shown at 1°.";
+  else if (Math.abs(((light.dir - r.dir + 540) % 360) - 180) > 1 || Math.abs(light.height - Math.max(1, r.height)) > 1) text += " Tweaked by hand (↺ by the time goes back to the real sun).";
+  return text;
+}
 
 // Shading is one look for the whole project, like Storyboarder's per-scene setting.
 function showShading() {
@@ -318,7 +371,18 @@ function showShading() {
 
 function buildLight() {
   const box = $("sg-light");
-  box.querySelectorAll(".sg-slider").forEach((r) => r.remove());
+  box.querySelectorAll(".sg-slider, .sg-sunday, .sg-sun-note").forEach((r) => r.remove());
+  const day = document.createElement("div");
+  day.className = "sg-slider sg-sunday";
+  day.title = "Shooting day: with the set's GPS, the day and time put the sun where the real one will be";
+  day.innerHTML = `<span>Day</span><input type="date" data-sun-date aria-label="Shooting day"><span></span><span></span>`;
+  const time = document.createElement("div");
+  time.className = "sg-slider";
+  time.title = "Clock time at the location: moves the sun along its real path for the day";
+  time.innerHTML = `<span>Time</span><input type="range" min="0" max="1435" step="5" data-sun-time aria-label="Time of day"><output data-sun-time-out></output><button class="sg-zero" data-sun-real title="Back to the real sun at this day and time">↺</button>`;
+  const note = document.createElement("p");
+  note.className = "muted sg-hint sg-sun-note";
+  box.append(day, time, note);
   for (const [key, label, min, max, step, title] of LIGHT_ROWS) {
     const row = document.createElement("div");
     row.className = "sg-slider";
@@ -341,8 +405,14 @@ function buildLight() {
 
 function showLight() {
   stage.setLight(light);
+  const box = $("sg-light");
+  box.querySelector("[data-sun-date]").value = sunDate();
+  box.querySelector("[data-sun-time]").value = sunTime();
+  box.querySelector("[data-sun-time-out]").textContent = clock(sunTime());
+  box.querySelector("[data-sun-real]").disabled = !place();
+  box.querySelector(".sg-sun-note").textContent = sunNote();
   for (const [key] of LIGHT_ROWS) {
-    $("sg-light").querySelector(`[data-light="${key}"]`).value = light[key];
+    $("sg-light").querySelector(`[data-light="${key}"]`).value = key === "dir" ? toCompass(light.dir) : light[key];
     $("sg-light").querySelector(`[data-light-out="${key}"]`).textContent = lightText(key, light[key]);
   }
   $("sg-light").querySelector("[data-light-walls]").checked = !!light.walls;
@@ -507,7 +577,7 @@ const num = (s, fallback) => {
 
 function setMenu(anchor) {
   openMenu(anchor, [
-    { label: "Room size and openings…", action: setDialog },
+    { label: "Room, openings and real sun…", action: setDialog },
     { type: "sep" },
     { label: loc.plan ? "Replace plan picture…" : "Add plan picture…", action: addPlanPicture },
     ...(loc.plan ? [
@@ -623,8 +693,16 @@ async function openLocation() {
   showPlan();
   placeAll();
   apply();
+  showLight();
   hooks.changed();
   toast(`Set loaded from "${location.name}".`);
+}
+
+function zones() {
+  const list = zoneList();
+  const own = deviceZone();
+  if (!list.includes(own)) list.unshift(own);
+  return list.map((z) => [z, z === own ? `${z} (this device)` : z]);
 }
 
 async function setDialog() {
@@ -639,6 +717,10 @@ async function setDialog() {
     { name: "d", label: "Depth, north–south (m)", value: r.d },
     { name: "h", label: "Ceiling height (m)", value: r.h },
     { type: "custom", name: "openings", ...openings },
+    { type: "note", label: "Real sun: where the set is on Earth and which way the plan's top wall faces. GPS as in Maps, e.g. 60.1699, 24.9384." },
+    { name: "gps", label: "GPS (latitude, longitude)", value: loc.gps?.lat != null ? `${loc.gps.lat}, ${loc.gps.lon}` : "" },
+    { name: "north", label: "The plan's top faces (compass °, 0 = true north, 90 = east)", value: r.north || 0 },
+    { name: "zone", label: "Time zone", type: "select", value: validZone(loc.gps?.timeZone) ? loc.gps.timeZone : deviceZone(), options: zones() },
   ], { ok: "Build" });
   if (!v) return;
   loc.name = v.name.trim() || loc.name;
@@ -653,9 +735,15 @@ async function setDialog() {
   };
   delete room.door;
   delete room.window;
+  room.north = ((num(v.north, r.north || 0) % 360) + 360) % 360;
+  const gps = parseGps(v.gps);
+  if (gps) loc.gps = { ...loc.gps, ...gps, timeZone: v.zone };
+  else if (!String(v.gps).trim()) delete loc.gps;
+  else toast("Couldn't read the GPS — type it as latitude, longitude, e.g. 60.1699, 24.9384.", 6000);
   loc.room = room;
   showTitle();
   stage.setSet(loc.room);
+  showLight();
   hooks.changed();
 }
 
@@ -717,6 +805,9 @@ function bind() {
     showLight();
   };
   $("sg-light").addEventListener("change", (e) => {
+    if (e.target.matches("[data-sun-date]")) {
+      if (DATE.test(e.target.value)) { light.date = e.target.value; followSun(); }
+    }
     if (e.target.matches("[data-light-walls]")) {
       light.walls = e.target.checked;
       if (light.walls && loc.room.exterior) toast("An exterior has no walls; this takes effect in rooms.");
@@ -734,11 +825,13 @@ function bind() {
   });
   $("sg-light").addEventListener("input", (e) => {
     const key = e.target.dataset?.light;
-    if (key) setLightValue(key, Number(e.target.value));
+    if (key) setLightValue(key, key === "dir" ? toPlan(Number(e.target.value)) : Number(e.target.value));
+    if (e.target.matches("[data-sun-time]")) { light.time = Number(e.target.value); followSun(); }
   });
   $("sg-light").addEventListener("click", (e) => {
     const key = e.target.dataset?.lightReset;
     if (key) { setLightValue(key, LIGHT[key]); showCameras(); }
+    if (e.target.matches("[data-sun-real]")) { followSun(); showCameras(); }
   });
   // No scroll-to-change on the panel: scrolling only scrolls it (Jarmo, 2026-11-18).
   $("sg-sizes").onclick = (e) => {

@@ -63,6 +63,7 @@ Entries may be stored or deflated. A file with only `project.json` is valid (a s
 | `lokaatio`, `aika` | Location and time of day (shown upper-case in headings) |
 | `synopsis`, `henkilot` | Text; Henkilöt as a comma list, e.g. `"A, B"` |
 | `actBefore` | Act divider label shown before this scene, e.g. `"ACT 2"`; empty for none |
+| `shootDate`, `shootTime` | Optional (v0.36.0): the scheduled shooting day `"YYYY-MM-DD"` and clock time `"HH:MM"` at the location, from the schedule. The Shot Generator's real sun starts from them while the scene's light has no day/time of its own. A merge fills them, or lists a change for Jarmo to accept. |
 | `id` | Optional in starter files |
 | `locationId` | Links to `locations[].id`; optional (the app also matches by `lokaatio` name) |
 | `collapsed` | App state |
@@ -70,7 +71,7 @@ Entries may be stored or deflated. A file with only `project.json` is valid (a s
 | `storyboard` | `false` = in the scene index but not storyboarded: no strip, PDF, shot sheet, viewer or 3D. Missing or `true` = storyboarded. |
 | `storyboardAuto` | App state: the scene came in from an import switched off and nobody has switched it by hand; a shot-list import switches it on when it brings the scene's first shots. |
 | `blocking` | `{ figures: [figure…] }` — the scene's figures, shared by every board of the scene (v0.22.0; figure fields as `shot3d.figures` below). Made by the app the first time the scene is opened in the Shot Generator, from the last board with figures. Optional in starter files. |
-| `light` | The scene's light, shared by every board of the scene (v0.27.0): `{ dir (° the sun comes from), height, sun, fill, diffusion, outside, walls }`, values as `shot3d.light` below. Made by the app the first time the scene is opened in the Shot Generator, from that board's light. Optional in starter files. |
+| `light` | The scene's light, shared by every board of the scene (v0.27.0): `{ dir (° the sun comes from), height, sun, fill, diffusion, outside, walls, date, time }`, values as `shot3d.light` below; `date` (`"YYYY-MM-DD"`) and `time` (minutes after midnight on the location's clock) are the day and time the real sun was last set from (v0.36.0), optional. Made by the app the first time the scene is opened in the Shot Generator, from that board's light. Optional in starter files. |
 
 ### `boards[]`
 
@@ -89,8 +90,8 @@ Entries may be stored or deflated. A file with only `project.json` is valid (a s
 | `camera` | Copy of `shot3d.camera`'s `height`, `tilt`, `pan`, `focal`, for the shot data sheet |
 
 `shot3d.camera`: `{ x, z (m), height (cm), pan, tilt, roll (°), focal (mm) }`.
-`shot3d.sun`: degrees on the plan the sun comes **from** (0 = north, 90 = east, + clockwise). Optional. When a scene has no `light` yet, the app starts it from this board's light, else the nearest earlier board's in the scene, else 125.
-`shot3d.light`: `{ height (° above the horizon, 5–90, default 45), sun, fill, diffusion, outside (0–100 %, defaults 50, 50, 0, 83), walls (bool, default false) }` — sun strength, ambient fill, how soft the sun is, the brightness of the sky seen through windows or behind an exterior, and whether walls and ceiling block the sun. Optional; missing values take the defaults.
+`shot3d.sun`: degrees on the plan the sun comes **from** (0 = the plan's top, 90 = its right, + clockwise). With `room.north` set, the true compass bearing is `sun + north`; the app's Sun slider shows the true bearing. Optional. When a scene has no `light` yet, the app starts it from this board's light, else the nearest earlier board's in the scene, else 125.
+`shot3d.light`: `{ height (° above the horizon, 1–90, default 45), sun, fill, diffusion, outside (0–100 %, defaults 50, 50, 0, 83), walls (bool, default false) }` — sun strength, ambient fill, how soft the sun is, the brightness of the sky seen through windows or behind an exterior, and whether walls and ceiling block the sun. Optional; missing values take the defaults.
 `shot3d.figures[]`: `{ id, kind: "figure", model, name, x, z (m), y (cm elevation), rot (°), height (cm), colour ("#rrggbb"), handColour (optional: picked by hand for a figure without a name) }`. Since v0.22.0 this is a record of what the saved picture showed; the live figures are `scene.blocking` + `ownFigures`.
 `shot3d.savedCamera`, `shot3d.savedLight` (`{ sun, light }`), `shot3d.setStamp` (text): the camera, light and set when the picture was saved, so the app can mark the picture out of date. Since v0.27.0 `shot3d.sun`/`light` are a record of the board's light; the live light is `scene.light` or `ownLight`. `shot3d.camera`, `sun` and `light` follow the camera even when no picture is saved (stepping between cameras keeps each board's camera).
 Optional pose fields on a figure (all may be left out; the app fills defaults):
@@ -107,11 +108,11 @@ Optional pose fields on a figure (all may be left out; the app fills defaults):
 |---|---|
 | `name` | e.g. `"Keittiö"` — matched against scenes' `lokaatio` |
 | `tag` | `"measured"`, `"traced"` or `"assumed"` |
-| `room` | `{ exterior (bool), w, d, h (m), openings, north (°) }` — `w` west–east, `d` north–south, `h` ceiling |
+| `room` | `{ exterior (bool), w, d, h (m), openings, north (°) }` — `w` west–east, `d` north–south, `h` ceiling. `north` = the true compass bearing the plan's top wall faces (0 = the plan's top is true north, 90 = it faces east). "North wall", "west–east" etc. always mean the plan's top, left–right. |
 | `room.openings[]` | Any number of `{ kind: "door"|"window"|"panel", wall: "n"|"s"|"e"|"w", offset (m from the wall's centre, + = east or south), width, height, sill (m: bottom edge above the floor; 0 for a door) }`. A door or window is a hole in the wall; a **panel** is a flat piece on the wall's face (projection screen, whiteboard), not a hole — the Shot Designer plan leaves the wall solid there. Missing sizes take the defaults: door 0.9 × 2.1, window 1.4 × 1.2 sill 0.9, panel 2.0 × 1.5 sill 0.8. `[]` = no openings. Added 2026-11-18 (v0.19.0), format stays 1. |
 | `room.door`, `room.window` | **Older files only** (before v0.19.0): one door `{ wall, offset, width, height }` and one window `{ wall, offset, width, height, sill }`, each or null. Still read: when a room has no `openings`, these become its openings. The app no longer writes them. A room with neither `openings` nor `door`/`window` gets the default door (east) and window (south). |
 | `objects[]` | Furniture: `{ id, kind: "object", model, x, z (m), y (cm elevation), rot (°), w, d, h (cm) }`. `model` ids are in `js/shotgen/catalog.js`, e.g. `table-sit-rectangle`. |
-| `gps` | Optional, carried as given (e.g. `{ lat, lon }`); not used by the app yet |
+| `gps` | Optional `{ lat, lon (decimal degrees, south and west negative), timeZone (IANA name, e.g. "Europe/Helsinki"; missing = the device's) }`. Used for the real sun (v0.36.0). |
 | `plan` | Optional floor-plan picture, lined up with the room: `{ type ("image/png" or "image/jpeg"), w, h (picture px), a, b ([x, y] px: the north wall's inside NW and NE corners, y down), dist (m between a and b), x, z (m: where the picture's centre lies on the floor), rot (° the picture is turned, + clockwise seen from above) }`. The picture itself is `plans/<location id>.*` in the zip. Scale = `dist` ÷ the a–b distance in px. A merge never brings a plan picture in; open the location file for that. |
 | `id` | Optional in starter files |
 
