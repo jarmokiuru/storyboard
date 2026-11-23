@@ -115,7 +115,15 @@ export function renderStrip(el, project, currentId, thumbs) {
     g.querySelector(".heading").textContent = heading(scene) + (scene.collapsed ? ` · ${boards.length}` : "");
     g.querySelector(".heading").title = scene.synopsis || "";
     const row = g.querySelector(".boards");
+    // Boards of one shot (4a, 4b…) sit together on one tinted strip; a gap marks where the next shot starts.
+    let shotBox = null, shotKuva = null;
     for (const b of boards) {
+      if (!shotBox || b.kuva !== shotKuva) {
+        shotBox = document.createElement("div");
+        shotBox.className = "shot";
+        shotKuva = b.kuva;
+        row.append(shotBox);
+      }
       const btn = document.createElement("button");
       btn.className = "board" + (b.id === currentId ? " current" : "") + (b.newShot ? " shot-start" : "");
       btn.dataset.id = b.id;
@@ -126,8 +134,9 @@ export function renderStrip(el, project, currentId, thumbs) {
       const label = document.createElement("span");
       label.textContent = boardLabel(project, b);
       btn.append(img, label);
-      row.append(btn);
+      shotBox.append(btn);
     }
+    for (const box of row.querySelectorAll(".shot")) box.classList.toggle("multi", box.children.length > 1);
     el.append(g);
   }
   const add = document.createElement("button");

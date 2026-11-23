@@ -365,8 +365,11 @@ function saveAsNewMenu(anchor) {
   ]);
 }
 
+// The board we came from keeps the camera it was saved with: the moved view goes to the new board only, so 4a stays
+// the start of a move and 4b becomes its end. (Before v0.34.0 the moved view was stored on both.) A board that
+// had no camera yet takes this one too.
 async function saveAsNew(sameShot) {
-  keepCamera();
+  if (!board.shot3d?.camera) keepCamera();
   const made = await hooks.saveAsNew(board.id, picture(), shot3d(), sameShot);
   board = made.board;
   figures = boardFigures(project, scene, board);

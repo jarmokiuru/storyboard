@@ -1,5 +1,9 @@
 # Changelog
 
+## 2026-11-23 — Storyboard v0.34.0 (camera moves keep their start; shots joined in the strip)
+- Shot Generator, *Save as new board*: the board you started from keeps the camera it was saved with; only the new board gets the moved view. Before, both got the moved view, so 4a and 4b sat on the same spot and the camera plan showed no move.
+- Board strip: the boards of one shot (4a, 4b…) sit together on a blue-tinted strip; a wider gap marks where the next shot starts.
+
 ## 2026-11-23 — Storyboard v0.33.0 (board menu, Backspace deletes a board)
 - Board menu in the strip: hold a board and let go, tap the board you're already on, or right-click it. New board in this shot, new shot after this, duplicate in this shot, duplicate as a new shot (next Kuva #, placed after the shot's last board), move left/right, start a new shot here / join the previous shot, delete.
 - Backspace deletes the board on screen (it asks first). Clearing all drawing layers moved to Shift-Backspace; Alt-Backspace still clears the active layer.
