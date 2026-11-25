@@ -42,8 +42,8 @@ export async function showProjects() {
       sceneCount(p),
       p.boards.length + (p.boards.length === 1 ? " board" : " boards"),
       "edited " + ago(p.modified),
-      p.exported ? "exported " + ago(p.exported) : "never exported",
-    ].join(" · ");
+      p.exported ? "exported " + ago(p.exported) : "",
+    ].filter(Boolean).join(" · ");
     ul.append(li);
   }
   $("no-projects").hidden = list.length > 0;
@@ -54,9 +54,9 @@ async function storageNote() {
   const note = $("storage-note");
   const kept = await storageKept();
   if (!standalone) {
-    note.textContent = "On the iPad, add Storyboard to the Home Screen (Share → Add to Home Screen) and always open it from that icon. In a Safari tab, Safari can delete the boards after 7 days without a visit. Export project files as backups.";
+    note.textContent = "On the iPad, add Storyboard to the Home Screen (Share → Add to Home Screen) and always open it from that icon. In a Safari tab, Safari can delete the boards after 7 days without a visit.";
   } else if (!kept) {
-    note.textContent = "This device hasn't promised to keep the boards. Export project files as backups.";
+    note.textContent = "This device hasn't promised to keep the boards.";
   } else {
     note.textContent = "";
   }

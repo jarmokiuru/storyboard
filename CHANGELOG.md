@@ -1,5 +1,8 @@
 # Changelog
 
+## 2026-11-25 — Storyboard v0.37.1 (no export reminders)
+- No more prompts or notes about exporting: the "Edited for N days without an export" banner is gone, as are "never exported" in the project list, "Not exported yet" in the top bar and Export menu, and the backup line in Cmd-S and the storage note. The app saves as you work; "Last exported" still shows once a project has been exported.
+
 ## 2026-11-25 — Storyboard v0.37.0 (projects screen centred)
 - Opening screen: "Storyboard" in large letters centred on top, with the version under it; the project list sits in the middle of the screen. Import and New project stay top right.
 

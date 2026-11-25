@@ -14,7 +14,7 @@ import { BoardView } from "./board-view.js";
 import { initStrip, renderStrip, setCurrent, setThumb, scrollToBoard } from "./strip.js";
 import { initPanel, fillPanel, updateLabel, renderLayers, togglePanel } from "./panel.js";
 import * as store from "./board-store.js";
-import { toast, confirmBox, formDialog, openMenu, shareFile, banner, pickFile, showText } from "./ui.js";
+import { toast, confirmBox, formDialog, openMenu, shareFile, pickFile, showText } from "./ui.js";
 import { exportProject } from "./projectfile.js";
 import { askOptions, makeContactSheet } from "./contact-sheet.js";
 import { lensMatches, lensText } from "./lens.js";
@@ -27,7 +27,6 @@ import { changeRatio, drawnBoards, cropEach } from "./ratio-change.js";
 
 const $ = (id) => document.getElementById(id);
 const GUIDES_KEY = "storyboard.guides";
-const NUDGE_DAYS = 3;
 
 let project = null;
 let board = null;
@@ -141,7 +140,6 @@ export async function openProject(p) {
   view.fit();
   await selectBoard(orderedBoards(p)[0], true);
   exportNote();
-  nudge();
 }
 
 export const flushEditor = () => flush();
@@ -612,7 +610,7 @@ function keyDown(e) {
     if (key === "y") return run(() => view.redo());
     if (key === "k") return run(() => showText("Keys", KEY_LIST));
     if (key === "p") return run(() => exportContactSheet(e.shiftKey ? { kind: "blank" } : {}));
-    if (key === "s") return run(() => flush().then(() => toast("Saved — the app saves as you work. Export a project file for a backup.")));
+    if (key === "s") return run(() => flush().then(() => toast("Saved — the app saves as you work.")));
     if (key === "0") return run(() => view.fit());
     if (key === "=" || key === "+") return run(() => zoomView(1.25));
     if (key === "-") return run(() => zoomView(0.8));
@@ -831,7 +829,7 @@ function exportMenu(anchor) {
     { label: "Shot data sheet (.csv)…", action: () => exportShotSheet("csv") },
     { label: "Camera plan of this scene (PNG)…", action: exportCameraPlan },
     { type: "sep" },
-    { type: "note", label: exportNoteText() },
+    ...(project.exported ? [{ type: "note", label: exportNoteText() }] : []),
     { type: "note", label: "Storyboard v" + VERSION },
   ]);
 }
@@ -985,20 +983,10 @@ async function exportPng() {
 }
 
 function exportNoteText() {
-  return project.exported ? "Last exported: " + ago(project.exported) : "Not exported yet";
+  // Only a fact when there is one: no reminders about exporting (Jarmo, 2026-11-25 — the app saves as he works).
+  return project.exported ? "Last exported: " + ago(project.exported) : "";
 }
 
 function exportNote() {
   $("export-note").textContent = exportNoteText();
-}
-
-function nudge() {
-  if (!project.editedSinceExport) return;
-  const since = project.exported || project.firstEditSinceExport;
-  const days = Math.floor((Date.now() - since) / 864e5);
-  if (days < NUDGE_DAYS) return;
-  banner(`Edited for ${days} days without an export. A project file is your backup off this device.`, [
-    { label: "Export now", primary: true, action: exportProjectFile },
-    { label: "Later" },
-  ]);
 }
