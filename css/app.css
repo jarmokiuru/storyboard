@@ -685,3 +685,13 @@ dialog label.check input, .si-list li input { accent-color: var(--accent); }
    (overflow hidden) let the grid squeeze every section to an equal share of the screen. */
 #sg-panel { grid-auto-rows: max-content; }
 #sg-panel label.sg-check input[type="checkbox"] { width: 20px; height: 20px; min-height: 0; margin: 0; padding: 0; flex: none; }
+
+/* Projects screen (v0.37.0): the app's name centred on top, the projects in the middle of the screen. */
+.projects-body { display: flex; flex-direction: column; }
+.projects-body > * { width: 100%; }
+.projects-main { margin-top: auto; margin-bottom: auto; padding: 24px 0; }
+.projects-hero { text-align: center; margin-bottom: 22px; }
+.projects-hero h1 { margin: 0; font-size: 34px; font-weight: 700; letter-spacing: -0.02em; }
+.projects-hero #app-version { display: block; margin-top: 4px; font-size: 13px; }
+.projects-main .empty { text-align: center; }
+.projects-body .foot { text-align: center; margin-bottom: 0; }

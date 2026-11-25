@@ -18,16 +18,20 @@
 
 <section id="projects-screen" hidden>
   <header class="bar">
-    <h1>Storyboard</h1>
-    <span id="app-version" class="muted"></span>
     <span class="spacer"></span>
     <button id="import-project">Import project file</button>
     <button id="new-project" class="primary">New project</button>
   </header>
   <div class="projects-body">
     <p id="storage-note" class="note" hidden></p>
-    <ul id="project-list"></ul>
-    <p id="no-projects" class="empty" hidden>No projects on this device yet. Tap New project, or import a project file.</p>
+    <div class="projects-main">
+      <div class="projects-hero">
+        <h1>Storyboard</h1>
+        <span id="app-version" class="muted"></span>
+      </div>
+      <ul id="project-list"></ul>
+      <p id="no-projects" class="empty" hidden>No projects on this device yet. Tap New project, or import a project file.</p>
+    </div>
     <p class="foot"><a href="pencil-test/">Pencil test</a></p>
   </div>
 </section>

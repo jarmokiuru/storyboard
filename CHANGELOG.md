@@ -1,5 +1,8 @@
 # Changelog
 
+## 2026-11-25 — Storyboard v0.37.0 (projects screen centred)
+- Opening screen: "Storyboard" in large letters centred on top, with the version under it; the project list sits in the middle of the screen. Import and New project stay top right.
+
 ## 2026-11-23 — Storyboard v0.36.0 (real sun from day, time and GPS)
 - Shot Generator → Set… → *Room, openings and real sun…*: the set's GPS (paste from Maps), time zone, and which way the plan's top wall really faces (compass degrees).
 - Light panel: **Day** and **Time**. Moving the time puts the sun where the real one is at that location (worked out on the device, no signal needed). A note gives the real sun's bearing and height, sunrise and sunset, and says when the sun is down or has been tweaked by hand; ↺ by the time goes back to the real sun.
